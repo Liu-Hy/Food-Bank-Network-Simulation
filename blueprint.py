@@ -1,9 +1,11 @@
 """
 Design of classes
 """
-import pandas as pd
-import networkx as nx
 from typing import List
+
+import networkx as nx
+import pandas as pd
+
 
 class Calendar:
     def __init__(self, day=0):
@@ -21,10 +23,13 @@ class Calendar:
 class Food:
     def __init__(self, df: pd.DataFrame):
         self.df = df
+
     def quality_control(self, num_days=1):
         pass
+
     def add(self, other):
         pass
+
     def substract(self, other):
         pass
 
@@ -38,7 +43,7 @@ class FoodPantry:
         self.operation_days = self.generate_op_days()
         # To maximize freshness, the ordered food arrives the day before each pantry event. Assume that the order is
         # made on the same day so that it is based on the latest information about the food in stock.
-        self.order_day = max(min(self.operation_days)-1, 0)
+        self.order_day = max(min(self.operation_days) - 1, 0)
         self.record = None
 
     def run_one_day(self):
@@ -51,21 +56,13 @@ class FoodPantry:
         if self.calendar.day_of_week in self.order_day:
             order = make_order(self.parent.food, demand)
         if self.calendar.day_of_week in self.operation_days:
-            pass # hold a pantry event
+            pass  # hold a pantry event
         if self.calendar.day_of_week == 6:
             pass
         return waste, order
-
-    def run_one_week(self):
-        pass
 
     def make_order(self, food, demand):
         pass
 
     def new_week_record(self):
         pass
-
-
-
-
-
