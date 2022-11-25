@@ -1,37 +1,6 @@
-"""
-Design of classes
-"""
-from typing import List
-
-import networkx as nx
 import pandas as pd
-
-
-class Calendar:
-    def __init__(self, day=0):
-        self.day = None
-        self.week = None
-        self.day_of_week = None
-
-    def update(self, num_days=1):
-        pass
-
-    def revert(self, num_days=1) -> Calendar:
-        pass
-
-
-class Food:
-    def __init__(self, df: pd.DataFrame):
-        self.df = df
-
-    def quality_control(self, num_days=1):
-        pass
-
-    def add(self, other):
-        pass
-
-    def substract(self, other):
-        pass
+from typing import List
+from utils import Calendar, Food
 
 
 class FoodPantry:
@@ -48,7 +17,7 @@ class FoodPantry:
 
     def run_one_day(self):
         self.calendar.update()
-        if self.calendar.day_of_week = 0:
+        if self.calendar.day_of_week == 0:
             self.record = new_week_record()
         # Before a pantry is possibly held, throw away out-of-date food and record the food waste
         waste = self.food.quality_control()
