@@ -1,6 +1,6 @@
 import pandas as pd
 
-class calendar:
+class Calendar:
     def __init__(self, day=0):
         self.day = day
         self.week = day // 7
