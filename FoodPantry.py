@@ -10,8 +10,6 @@ class FoodPantry:
         self.food = self.initialize_food()
         self.calendar = Calendar()
         self.operation_days = self.generate_op_days()
-        # To maximize freshness, the ordered food arrives the day before each pantry event. Assume that the order is
-        # made on the same day so that it is based on the latest information about the food in stock.
         self.order_day = max(min(self.operation_days) - 1, 0)
         self.record = None
 
