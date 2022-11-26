@@ -92,10 +92,10 @@ class Food:
         """
         # Since MultiIndex is immutable, this is the fastest way to my knowledge
         self.df.index = self.df.index.set_levels(self.df.index.levels[1] - num_days, level=1)
-        # To Do: change the below syntax for multi-indexed df
+        # To Do: test the below lines for multi-indexed dataframe
         mask = self.df["remaining_days"] <= 0
         waste = self.df[mask]
-        waste_counter = waste.groupby(["type"])["quantity"].agg("sum")["quantity"].to_dict()
+        waste_counter = waste.groupby(level=0)["quantity"].agg("sum")["quantity"].to_dict()
         self.df = self.df[~mask]
         return waste_counter
 
