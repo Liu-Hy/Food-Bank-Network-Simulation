@@ -140,21 +140,21 @@ class Food:
         >>> a.sort_by_freshness()
         >>> a.df
                                     type  remaining_days   quantity
-        193  fresh fruits and vegetables              14  35.714286
-        192  fresh fruits and vegetables              13  35.714286
-        191  fresh fruits and vegetables              12  35.714286
-        190  fresh fruits and vegetables              11  35.714286
-        189  fresh fruits and vegetables              10  35.714286
+        0    fresh_fruits_and_vegetables              14  35.714286
+        1    fresh_fruits_and_vegetables              13  35.714286
+        2    fresh_fruits_and_vegetables              12  35.714286
+        3    fresh_fruits_and_vegetables              11  35.714286
+        4    fresh_fruits_and_vegetables              10  35.714286
         ..                           ...             ...        ...
-        4                        staples               5   8.333333
-        3                        staples               4   8.333333
-        2                        staples               3   8.333333
-        1                        staples               2   8.333333
-        0                        staples               1   8.333333
+        739                      staples               5   8.333333
+        740                      staples               4   8.333333
+        741                      staples               3   8.333333
+        742                      staples               2   8.333333
+        743                      staples               1   8.333333
         <BLANKLINE>
         [744 rows x 3 columns]
         """
-        self.df = self.df.sort_values(by=["type", "remaining_days"], ascending=[True, ascending])
+        self.df = self.df.sort_values(by=["type", "remaining_days"], ascending=[True, ascending]).reset_index(drop=True)
 
     def quality_control(self, num_days=1) -> Dict[str, float]:
         """ Subtract some days from the remaining shelf life of the food, remove the expired food from the inventory,
