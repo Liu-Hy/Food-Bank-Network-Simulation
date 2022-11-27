@@ -163,11 +163,14 @@ class Food:
         >>> a = Food(5000)
         >>> sum(a.quality_control(float("inf")).values()) == 5000
         True
-        >>> res = a.quality_control(20)
-        >>> all([a.quality_control(10)[key] < value < a.quality_control(30)[key] for key, value in res.items()])
+        >>> res = Food(2000).quality_control(10)
+        >>> {k: round(v, 2) for k, v in res.items()}  # doctest: +NORMALIZE_WHITESPACE
+        {'fresh_fruits_and_vegetables': 142.86, 'fresh_protein': 200.0, 'packaged_fruits_and_vegetables': 13.89,
+        'packaged_protein': 27.78, 'staples': 33.33}
+        >>> res1 = Food(2000).quality_control(5)
+        >>> res2 = Food(2000).quality_control(20)
+        >>> all([res1[key] <= value <= res2[key] for key, value in res.items()])
         True
-        >>> a.quality_control(7)
-        {FFV: 250.0, 'fresh protein': 350.0, 'packaged fruits and vegetables': 24.305555555555557, 'packaged protein': 48.611111111111114, 'staples': 58.333333333333336}
         """
         self.df["remaining_days"] -= num_days
         mask = self.df["remaining_days"] <= 0
