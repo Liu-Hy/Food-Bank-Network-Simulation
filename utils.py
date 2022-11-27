@@ -90,6 +90,7 @@ class Food:
         elif isinstance(inventory, pd.DataFrame):
             self.df = inventory
         elif isinstance(inventory, (float, int)):
+            assert inventory > 0
             type = []
             remaining_days = []
             quantity = []
@@ -103,12 +104,13 @@ class Food:
             self.df = pd.DataFrame({"type": type, "remaining_days": remaining_days, "quantity": quantity})
         else:
             raise ValueError("Invalid input for initialization")
-            #self.df = self.df.set_index(["type", "remaining_days"])
 
 
     @classmethod
     def generate_donation(cls, mean_total: float):
-        """Generate food donation in a day. The quantity of each type and the total are all random, but their means are given
+        """Generate donated food to a food bank in a day. The quantity of different types and the total are all random, but
+        their mean values are derived from anual statistics.
+        :param mean_total: the mean of the total pounds of foods donated to a food bank per day.
         :return:
         >>> food = Food.generate_donation(5000).df
         """
@@ -175,8 +177,9 @@ class Food:
         self.df = self.df[~mask]
         return waste_counter
 
-    def add(self, other):
-        """ Add a new batch of food to inventory
+    def add(self, other) -> None:
+        """ Add a new batch of food to inventory. Merge food items with same type and remaining days.
+        Fully tested on jupyter notebook. Still thinking of how to present tests concisely in doctrings
         :param other:
         :return:
 
@@ -184,11 +187,12 @@ class Food:
         if isinstance(other, Food):
             other = other.df
         self.df = self.df.set_index(["type", "remaining_days"]).add(other.set_index(["type", "remaining_days"]),
-                                                                    fill_value=0)
+                                                                    fill_value=0).reset_index()
 
-    def subtract(self, other):
+    def subtract(self, other) -> None:
         """
-        Subtract an existing batch of food from inventory
+        Subtract an existing batch of food from inventory.
+        To do: implement a version where only demand of each type is known, and shelf life are not specified.
         :param other:
         :return:
         """
@@ -196,5 +200,5 @@ class Food:
             other = other.df
         self.df = self.df.set_index(["type", "remaining_days"]).sub(other.set_index(["type", "remaining_days"]),
                                                                     fill_value=0).reset_index()
-        # if not valid: raise ValueError("Some food items does not exist or are not enough")
+
 
