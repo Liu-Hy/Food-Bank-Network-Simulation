@@ -176,7 +176,6 @@ class Food:
         self.df["remaining_days"] -= num_days
         mask = self.df["remaining_days"] <= 0
         waste = self.df[mask]
-        #waste_counter = waste.groupby(["type"])["quantity"].agg("sum")["quantity"].to_dict()
         waste_counter = waste.groupby(["type"])["quantity"].agg("sum").to_dict()
         self.df = self.df[~mask]
         return waste_counter

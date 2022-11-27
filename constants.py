@@ -20,3 +20,5 @@ PERSON_WEEKLY_DEMAND = {STP: {"mean": 5.125, "std": 0.4},
 
 # 1.24% households have 7 or more persons. Assume the max number is 10 person, and 7-10 persons are equally likely
 FAMILY_DISTRIBUTION = [0.2845, 0.3503, 0.1503, 0.1239, 0.0583, 0.0203] + ([0.0031] * 4)
+
+ELASTICITY = {STP: -0.3, FV: -0.5, PT: -0.6}
