@@ -3,18 +3,18 @@ import pandas as pd
 from typing import Dict
 from constants import *
 
-def mod_beta_random(min: float, max: float, mean: float, std: float, samples: int) -> np.ndarray:
+def mod_beta_random(low: float, high: float, mean: float, std: float, samples: int) -> np.ndarray:
     """
     Generate random numbers from a transformed Beta distribution
     Formulas to derive parameters are taken from here
     https://stats.stackexchange.com/questions/12232/calculating-the-parameters-of-a-beta-distribution-using-the-mean-and-variance
-    :param min: the lowest value possible
-    :param max: the highest value possible
+    :param low: the lowest value possible
+    :param high: the highest value possible
     :param mean: the mean of the population
     :param std: the standard deviation of the population
     :param samples: the number of samples to generate, or a tuple of the output shape
     :return: a np.ndarray of size "shape" drawn from the distribution
-    >>> beta = mod_beta_random(0., 10., 4., 1.9, 200)
+    >>> beta = mod_beta_random(0., 10., 4., 1.9, 500)
     >>> np.all((0 <= beta) & (beta <= 10))
     True
     >>> np.all((0.5 <= beta) & (beta <= 9.5))
@@ -26,14 +26,14 @@ def mod_beta_random(min: float, max: float, mean: float, std: float, samples: in
     >>> 1.8 < std and std < 2.0
     True
     """
-    assert min <= mean <= max, "Population mean out of bound."
-    mu = (mean - min) / (max - min)
-    sigma = std / (max - min)
+    assert low <= mean <= high, "Population mean out of bound."
+    mu = (mean - low) / (high - low)
+    sigma = std / (high - low)
     assert sigma ** 2 <= mu * (1 - mu), "Population standard deviation too large for a Beta distribution to exist."
     a = ((1 - mu) / (sigma ** 2) - 1 / mu) * (mu ** 2)
     b = a * (1 / mu - 1)
     beta = np.random.beta(a, b, samples)
-    beta = min + beta * (max - min)
+    beta = low + beta * (high - low)
     return beta
 
 
@@ -50,28 +50,16 @@ class Calendar:
 
 
 class Food:
-    def __init__(self, df=None):
-        if df is not None:
-            assert isinstance(df, pd.DataFrame)
-            self.df = df
-        else:
-            self.df = pd.DataFrame(columns=[
-                "type",
-                "quantity",
-                "remaining_days"
-            ]).astype(dtype={
-                "type": str,
-                "quantity": float,
-                "remaining_days": int,
-            })
-            self.df = self.df.set_index(["type", "remaining_days"])
-
-    def initialize_inventory(self, total: float) -> pd.DataFrame:
-        """Initialize the inventory of a food bank
-        :param total: the total quantity of food in pounds
-        :return:
-        >>> food = Food()
-        >>> food.initialize_inventory(5000)  # doctest: +ELLIPSIS
+    def __init__(self, inventory=None):
+        """
+        Initialize a Food object which is either empty, or based on a dataframe or total pounds of food.
+        :param inventory:
+        >>> Food().df
+        Empty DataFrame
+        Columns: [type, quantity, remaining_days]
+        Index: []
+        >>> a = Food(5000).df
+        >>> a
                          type  quantity  remaining_days
         0             staples  8.333333               1
         1             staples  8.333333               2
@@ -86,33 +74,67 @@ class Food:
         743  packaged protein  6.944444             180
         <BLANKLINE>
         [744 rows x 3 columns]
+        >>> a.equals(Food(a).df)
+        True
+        """
+        if inventory is None:
+            self.df = pd.DataFrame(columns=[
+                "type",
+                "quantity",
+                "remaining_days"
+            ]).astype(dtype={
+                "type": str,
+                "quantity": float,
+                "remaining_days": int,
+            })
+        elif isinstance(inventory, pd.DataFrame):
+            self.df = inventory
+        elif isinstance(inventory, (float, int)):
+            type = []
+            quantity = []
+            remaining_days = []
+            for t in TYPES.keys():
+                # Assume that the remaining shelf lives of foods are uniformly distributed within [1, max_days]
+                q = inventory * TYPES[t]["proportion"] / TYPES[t]["max_days"]
+                for d in range(1, TYPES[t]["max_days"] + 1):
+                    type.append(t)
+                    quantity.append(q)
+                    remaining_days.append(d)
+            self.df = pd.DataFrame({"type": type, "quantity": quantity, "remaining_days": remaining_days})
+        else:
+            raise ValueError("Invalid input for initialization")
+            #self.df = self.df.set_index(["type", "remaining_days"])
+
+
+    @classmethod
+    def generate_donation(cls, mean_total: float):
+        """Generate food donation in a day. The quantity of each type and the total are all random, but their means are given
+        :return:
+        >>> food = Food.generate_donation(5000).df
         """
         type = []
         quantity = []
         remaining_days = []
         for t in TYPES.keys():
             # Assume that the remaining shelf lives of foods are uniformly distributed within [1, max_days]
-            q = total * TYPES[t]["proportion"] / TYPES[t]["max_days"]
+            mean = mean_total * TYPES[t]["proportion"]
+            low, high, stdev = 0.3 * mean, 5 * mean, 0.5 * mean
+            beta = mod_beta_random(low, high, mean, stdev, 1).item()
+            q = beta / TYPES[t]["max_days"]
             for d in range(1, TYPES[t]["max_days"] + 1):
                 type.append(t)
                 quantity.append(q)
                 remaining_days.append(d)
         df = pd.DataFrame({"type": type, "quantity": quantity, "remaining_days": remaining_days})
-        return df
+        return Food(df)
 
-    def generate_donation(self, exp_total):
-        """Generate food donation in a day. The quantity of each type and the total are all random, but their means are given
-        :return:
-        """
-        pass
-
-    def sort_by_freshness(self, ascending: bool):
+    def sort_by_freshness(self, ascending=False):
         """
         Sort the food in each category by the remaining shelf life. Assume that clients prefer the freshest food,
         whereas food bank gives out food that is going to expire in order to reduce waste.
         :return:
         """
-        self.df = self.df.sort_index(ascending=[True, ascending])
+        self.df = self.df.sort_values(by=["type", "remaining_days"], ascending=[True, ascending])
 
     def quality_control(self, num_days=1) -> Dict[str, float]:
         """ Subtract some days from the remaining shelf life of the food, remove the expired food from the inventory,
@@ -120,12 +142,10 @@ class Food:
         :param num_days: number of days since the last quality check
         :return: a dictionary storing the wasted food in each category
         """
-        # Since MultiIndex is immutable, this is the fastest way to my knowledge
-        self.df.index = self.df.index.set_levels(self.df.index.levels[1] - num_days, level=1)
-        # To Do: test the below lines for multi-indexed dataframe
+        self.df["remaining_days"] -= num_days
         mask = self.df["remaining_days"] <= 0
         waste = self.df[mask]
-        waste_counter = waste.groupby(level=0)["quantity"].agg("sum")["quantity"].to_dict()
+        waste_counter = waste.groupby(["type"])["quantity"].agg("sum")["quantity"].to_dict()
         self.df = self.df[~mask]
         return waste_counter
 
@@ -133,11 +153,15 @@ class Food:
         """ Add a new batch of food to inventory
         :param other:
         :return:
+        >>> food1 = Food.generate_donation(100)
+        >>> food1.df
+        >>> food1.add(Food.generate_donation(100))
+        >>> food1.df
         """
         if isinstance(other, Food):
             other = other.df
-        self.df = self.df.add(other, fill_value=0)
-        pass
+        self.df = self.df.set_index(["type", "remaining_days"]).add(other.set_index(["type", "remaining_days"]),
+                                                                    fill_value=0).reset_index()
 
     def subtract(self, other):
         """
@@ -147,6 +171,7 @@ class Food:
         """
         if isinstance(other, Food):
             other = other.df
-        self.df = self.df.sub(other, fill_value=0)
+        self.df = self.df.set_index(["type", "remaining_days"]).sub(other.set_index(["type", "remaining_days"]),
+                                                                    fill_value=0).reset_index()
         # if not valid: raise ValueError("Some food items does not exist or are not enough")
 
