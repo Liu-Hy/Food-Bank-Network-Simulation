@@ -32,7 +32,7 @@ def mod_beta_random(low: float, high: float, mean: float, std: float, samples: i
     assert sigma ** 2 <= mu * (1 - mu), "Population standard deviation too large for a Beta distribution to exist."
     a = ((1 - mu) / (sigma ** 2) - 1 / mu) * (mu ** 2)
     b = a * (1 / mu - 1)
-    beta = np.random.beta(a, b, samples)
+    beta = np.random.default_rng().beta(a, b, samples)
     beta = low + beta * (high - low)
     return beta
 

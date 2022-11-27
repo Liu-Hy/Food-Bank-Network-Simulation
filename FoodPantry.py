@@ -1,35 +1,39 @@
+import numpy as np
 import pandas as pd
 from typing import List
-from utils import Calendar, Food
+from constants import *
+from utils import Calendar, Food, mod_beta_random
 
 
 class FoodPantry:
-    def __init__(self, parent: FoodBank):
-        self.parent = parent
-        self.clients = self.generate_clients(num_household=100)
-        self.food = self.initialize_food()
+    def __init__(self, parent: FoodBank, households=100):
+        self.parent = parant
+        self.households = households
         self.calendar = Calendar()
-        self.operation_days = self.generate_op_days()
-        self.order_day = max(min(self.operation_days) - 1, 0)
-        self.record = None
+        self.clients = self.generate_clients()
+        self.base_secured_rate = self.generate_base_secured()
+        self.operation_day = np.random.default_rng().choice(range(7), 1)
+        self.previous_record = None
+
+    def generate_clients(self):
+        columns = [("num_people", ""), (STP, "demand"), (STP, "secured"), (STP, "lacking"), (STP, "purchased"),
+                   (FV, "demand"), (FV, "secured"), (FV, "lacking"), (FV, "purchased_fresh"),
+                   (FV, "purchased_packaged"),
+                   (PT, "demand"), (PT, "secured"), (PT, "lacking"), (PT, "purchased_fresh"),
+                   (PT, "purchased_packaged")]
+        clients = pd.DataFrame(columns=pd.MultiIndex.from_tuples(columns))
+        clients[("num_people", "")] = np.random.default_rng().choice(range(1, 11), self.households, p=FAMILY_DISTRIBUTION)
+        for type, value in PERSON_WEEKLY_DEMAND.items():
+            mean, std = value["mean"], value["std"]
+            low, high = 0.5 * mean, 2 * mean
+            clients[(type, "demand")] = mod_beta_random(low, high, mean, std, self.households)
+
+    def generate_base_secured(self):
+        return np.random.default_rng().uniform(0.3, 0.8, (self.households, 3))
 
     def run_one_day(self):
-        self.calendar.update()
-        if self.calendar.day_of_week == 0:
-            self.record = new_week_record()
-        # Before a pantry is possibly held, throw away out-of-date food and record the food waste
-        waste = self.food.quality_control()
-        order = None
-        if self.calendar.day_of_week in self.order_day:
-            order = make_order(self.parent.food, demand)
-        if self.calendar.day_of_week in self.operation_days:
-            pass  # hold a pantry event
-        if self.calendar.day_of_week == 6:
-            pass
-        return waste, order
+
+
 
     def make_order(self, food, demand):
-        pass
-
-    def new_week_record(self):
         pass
