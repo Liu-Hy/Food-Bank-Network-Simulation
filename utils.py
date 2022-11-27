@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from typing import Dict
+from constants import *
 
 def mod_beta_random(min: float, max: float, mean: float, std: float, samples: int) -> np.ndarray:
     """
@@ -25,7 +26,7 @@ def mod_beta_random(min: float, max: float, mean: float, std: float, samples: in
     >>> 1.8 < std and std < 2.0
     True
     """
-    assert min <= mean <= max, "Population mean out of bound!"
+    assert min <= mean <= max, "Population mean out of bound."
     mu = (mean - min) / (max - min)
     sigma = std / (max - min)
     assert sigma ** 2 <= mu * (1 - mu), "Population standard deviation too large for a Beta distribution to exist."
@@ -49,8 +50,9 @@ class Calendar:
 
 
 class Food:
-    def __init__(self, df: pd.DataFrame=None):
+    def __init__(self, df=None):
         if df is not None:
+            assert isinstance(df, pd.DataFrame)
             self.df = df
         else:
             self.df = pd.DataFrame(columns=[
@@ -62,13 +64,41 @@ class Food:
                 "quantity": float,
                 "remaining_days": int,
             })
-            self.df = self.df.set_index(["type", "remaining_days"]) # later will try MultiIndex for efficiency
+            self.df = self.df.set_index(["type", "remaining_days"])
 
-    def initialize_inventory(self, total):
-        """Initialize the inventory of a food bank or a pantry
+    def initialize_inventory(self, total: float) -> pd.DataFrame:
+        """Initialize the inventory of a food bank
+        :param total: the total quantity of food in pounds
         :return:
+        >>> food = Food()
+        >>> food.initialize_inventory(5000)  # doctest: +ELLIPSIS
+                         type  quantity  remaining_days
+        0             staples  8.333333               1
+        1             staples  8.333333               2
+        2             staples  8.333333               3
+        3             staples  8.333333               4
+        4             staples  8.333333               5
+        ..                ...       ...             ...
+        739  packaged protein  6.944444             176
+        740  packaged protein  6.944444             177
+        741  packaged protein  6.944444             178
+        742  packaged protein  6.944444             179
+        743  packaged protein  6.944444             180
+        <BLANKLINE>
+        [744 rows x 3 columns]
         """
-        pass
+        type = []
+        quantity = []
+        remaining_days = []
+        for t in TYPES.keys():
+            # Assume that the remaining shelf lives of foods are uniformly distributed within [1, max_days]
+            q = total * TYPES[t]["proportion"] / TYPES[t]["max_days"]
+            for d in range(1, TYPES[t]["max_days"] + 1):
+                type.append(t)
+                quantity.append(q)
+                remaining_days.append(d)
+        df = pd.DataFrame({"type": type, "quantity": quantity, "remaining_days": remaining_days})
+        return df
 
     def generate_donation(self, exp_total):
         """Generate food donation in a day. The quantity of each type and the total are all random, but their means are given
