@@ -56,22 +56,22 @@ class Food:
         :param inventory:
         >>> Food().df
         Empty DataFrame
-        Columns: [type, quantity, remaining_days]
+        Columns: [type, remaining_days, quantity]
         Index: []
         >>> a = Food(5000).df
         >>> a
-                         type  quantity  remaining_days
-        0             staples  8.333333               1
-        1             staples  8.333333               2
-        2             staples  8.333333               3
-        3             staples  8.333333               4
-        4             staples  8.333333               5
-        ..                ...       ...             ...
-        739  packaged protein  6.944444             176
-        740  packaged protein  6.944444             177
-        741  packaged protein  6.944444             178
-        742  packaged protein  6.944444             179
-        743  packaged protein  6.944444             180
+                         type  remaining_days  quantity
+        0             staples               1  8.333333
+        1             staples               2  8.333333
+        2             staples               3  8.333333
+        3             staples               4  8.333333
+        4             staples               5  8.333333
+        ..                ...             ...       ...
+        739  packaged protein             176  6.944444
+        740  packaged protein             177  6.944444
+        741  packaged protein             178  6.944444
+        742  packaged protein             179  6.944444
+        743  packaged protein             180  6.944444
         <BLANKLINE>
         [744 rows x 3 columns]
         >>> a.equals(Food(a).df)
@@ -80,27 +80,27 @@ class Food:
         if inventory is None:
             self.df = pd.DataFrame(columns=[
                 "type",
-                "quantity",
-                "remaining_days"
+                "remaining_days",
+                "quantity"
             ]).astype(dtype={
                 "type": str,
-                "quantity": float,
                 "remaining_days": int,
+                "quantity": float
             })
         elif isinstance(inventory, pd.DataFrame):
             self.df = inventory
         elif isinstance(inventory, (float, int)):
             type = []
-            quantity = []
             remaining_days = []
+            quantity = []
             for t in TYPES.keys():
                 # Assume that the remaining shelf lives of foods are uniformly distributed within [1, max_days]
                 q = inventory * TYPES[t]["proportion"] / TYPES[t]["max_days"]
                 for d in range(1, TYPES[t]["max_days"] + 1):
                     type.append(t)
-                    quantity.append(q)
                     remaining_days.append(d)
-            self.df = pd.DataFrame({"type": type, "quantity": quantity, "remaining_days": remaining_days})
+                    quantity.append(q)
+            self.df = pd.DataFrame({"type": type, "remaining_days": remaining_days, "quantity": quantity})
         else:
             raise ValueError("Invalid input for initialization")
             #self.df = self.df.set_index(["type", "remaining_days"])
@@ -123,9 +123,9 @@ class Food:
             q = beta / TYPES[t]["max_days"]
             for d in range(1, TYPES[t]["max_days"] + 1):
                 type.append(t)
-                quantity.append(q)
                 remaining_days.append(d)
-        df = pd.DataFrame({"type": type, "quantity": quantity, "remaining_days": remaining_days})
+                quantity.append(q)
+        df = pd.DataFrame({"type": type, "remaining_days": remaining_days, "quantity": quantity})
         return Food(df)
 
     def sort_by_freshness(self, ascending=False):
@@ -133,6 +133,23 @@ class Food:
         Sort the food in each category by the remaining shelf life. Assume that clients prefer the freshest food,
         whereas food bank gives out food that is going to expire in order to reduce waste.
         :return:
+        >>> a = Food(5000)
+        >>> a.sort_by_freshness()
+        >>> a.df
+                                    type  remaining_days   quantity
+        193  fresh fruits and vegetables              14  35.714286
+        192  fresh fruits and vegetables              13  35.714286
+        191  fresh fruits and vegetables              12  35.714286
+        190  fresh fruits and vegetables              11  35.714286
+        189  fresh fruits and vegetables              10  35.714286
+        ..                           ...             ...        ...
+        4                        staples               5   8.333333
+        3                        staples               4   8.333333
+        2                        staples               3   8.333333
+        1                        staples               2   8.333333
+        0                        staples               1   8.333333
+        <BLANKLINE>
+        [744 rows x 3 columns]
         """
         self.df = self.df.sort_values(by=["type", "remaining_days"], ascending=[True, ascending])
 
@@ -141,11 +158,20 @@ class Food:
         and record the quantity of waste in each category.
         :param num_days: number of days since the last quality check
         :return: a dictionary storing the wasted food in each category
+        >>> a = Food(5000)
+        >>> sum(a.quality_control(float("inf")).values()) == 5000
+        True
+        >>> res = a.quality_control(20)
+        >>> all([a.quality_control(10)[key] < value < a.quality_control(30)[key] for key, value in res.items()])
+        True
+        >>> a.quality_control(7)
+        {FFV: 250.0, 'fresh protein': 350.0, 'packaged fruits and vegetables': 24.305555555555557, 'packaged protein': 48.611111111111114, 'staples': 58.333333333333336}
         """
         self.df["remaining_days"] -= num_days
         mask = self.df["remaining_days"] <= 0
         waste = self.df[mask]
-        waste_counter = waste.groupby(["type"])["quantity"].agg("sum")["quantity"].to_dict()
+        #waste_counter = waste.groupby(["type"])["quantity"].agg("sum")["quantity"].to_dict()
+        waste_counter = waste.groupby(["type"])["quantity"].agg("sum").to_dict()
         self.df = self.df[~mask]
         return waste_counter
 
@@ -153,15 +179,12 @@ class Food:
         """ Add a new batch of food to inventory
         :param other:
         :return:
-        >>> food1 = Food.generate_donation(100)
-        >>> food1.df
-        >>> food1.add(Food.generate_donation(100))
-        >>> food1.df
+
         """
         if isinstance(other, Food):
             other = other.df
         self.df = self.df.set_index(["type", "remaining_days"]).add(other.set_index(["type", "remaining_days"]),
-                                                                    fill_value=0).reset_index()
+                                                                    fill_value=0)
 
     def subtract(self, other):
         """
