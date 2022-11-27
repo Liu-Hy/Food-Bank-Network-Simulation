@@ -12,7 +12,8 @@ class FoodPantry:
         self.calendar = Calendar()
         self.clients = self.generate_clients()
         self.base_secured_rate = self.generate_base_secured()
-        self.operation_day =
+        self.operation_day = np.random.default_rng().choice(range(7), 1)
+        self.previous_record = None
 
     def generate_clients(self):
         columns = [("num_people", ""), (STP, "demand"), (STP, "secured"), (STP, "lacking"), (STP, "purchased"),
@@ -21,7 +22,7 @@ class FoodPantry:
                    (PT, "demand"), (PT, "secured"), (PT, "lacking"), (PT, "purchased_fresh"),
                    (PT, "purchased_packaged")]
         clients = pd.DataFrame(columns=pd.MultiIndex.from_tuples(columns))
-        clients[("num_people", "")]
+        clients[("num_people", "")] = np.random.default_rng().choice(range(1, 11), self.households, p=FAMILY_DISTRIBUTION)
         for type, value in PERSON_WEEKLY_DEMAND.items():
             mean, std = value["mean"], value["std"]
             low, high = 0.5 * mean, 2 * mean
