@@ -58,7 +58,8 @@ class FoodPantry:
         waste = self.food.quality_control(num_days=7)
         self.food.sort_by_freshness()
         # TO DO: hold a pantry. Use aggregation instead of loops whenever possible
-        return waste, order
+        inc = self.get_utility()
+        return waste, order, inc
 
     def estimate_demand(self) -> Dict[str, float]:
         """Estimate client demand this week based on prior experience"""
@@ -79,3 +80,8 @@ class FoodPantry:
         order[FPT] = min(est_demand[PT], stock[FPT])
         order[PFV] = min(est_demand[PT] - order[FPT], stock[PFV])
         return order
+
+    def get_utility(self) -> float:
+        """Estimate the increment in social welfare after a pantry event
+        :return:
+        """
