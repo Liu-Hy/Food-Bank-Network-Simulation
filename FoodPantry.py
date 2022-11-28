@@ -59,6 +59,9 @@ class FoodPantry:
         waste = self.food.quality_control(num_days=7)
         self.food.sort_by_freshness()
         # TO DO: hold a pantry. Use aggregation instead of loops whenever possible
+        type_df = self.food.df[self.food.df["type"] == STP]
+        if type_df["quantities"].sum() < self.clients[(STP, "lacking")]:
+            type_df["quantitie"]
         utility = self.get_utility()
         return waste, order, utility
 

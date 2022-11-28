@@ -127,7 +127,7 @@ class Food:
         df = pd.DataFrame({"type": type, "remaining_days": remaining_days, "quantity": quantity})
         return Food(df)
 
-    def sort_by_freshness(self, ascending=False):
+    def sort_by_freshness(self, ascending=False, inplace=True):
         """
         Sort the food in each category by the remaining shelf life. Assume that clients prefer the freshest food,
         whereas food bank gives out food that is going to expire in order to reduce waste.
@@ -146,7 +146,10 @@ class Food:
         <BLANKLINE>
         [744 rows x 3 columns]
         """
-        self.df = self.df.sort_values(by=["type", "remaining_days"], ascending=[True, ascending]).reset_index(drop=True)
+        sorted_df = self.df.sort_values(by=["type", "remaining_days"], ascending=[True, ascending]).reset_index(drop=True)
+        if not inplace:
+            return Food(sorted_df)
+        self.df = sorted_df
 
     @classmethod
     def get_quantity(cls, data) -> Dict[str, float]:
@@ -188,57 +191,83 @@ class Food:
         Fully tested on jupyter notebook. Still thinking of how to present tests concisely in doctrings
         :param other:
         :return:
-
+        178           staples             179      8.333333
+        179           staples             180      1.333333
+        ...
         """
         if isinstance(other, Food):
             other = other.df
         self.df = self.df.set_index(["type", "remaining_days"]).add(other.set_index(["type", "remaining_days"]),
                                                                     fill_value=0).reset_index()
 
-    def subtract(self, order: Dict[str, float]) -> None:
+    def subtract(self, order: Dict[str, float]):
         """
-        Subtract an existing batch of food from inventory.
-        To do: implement a version where only demand of each type is known, and shelf life are not specified.
+        Subtract an existing batch of food from inventory, and return the order with specific remaining days.
+        Need less confusing names for methods and parameters
         :param order:
         :return:
         >>> a = Food(5000)
-        >>> stock = Food.get_quantity(a.df)
-        >>> order = {k: v-7 for k, v in stock.items()}  # Take away all but 7 pounds in each type
-        >>> a.subtract(order)
-        >>> a.df.round(2)
+        >>> q = Food.get_quantity(a.df)
+        >>> order = {k: v-7 for k, v in q.items()}  # Take away all but 7 pounds in each type
+        >>> sent = a.subtract(order).sort_by_freshness(inplace=False)
+        >>> sent.df[sent.df["type"] == STP]  # doctest: +ELLIPSIS
+                type  remaining_days  quantity
+        561  staples             180  1.333333
+        562  staples             179  8.333333
+        563  staples             178  8.333333
+        ...
+        <BLANKLINE>
+        [180 rows x 3 columns]
+        >>> sent.df[sent.df["type"] == PPT]  # doctest: +ELLIPSIS
+                         type  remaining_days  quantity
+        382  packaged_protein             179  6.888889
+        383  packaged_protein             178  6.944444
+        384  packaged_protein             177  6.944444
+        ...
+        <BLANKLINE>
+        [179 rows x 3 columns]
+        >>> a.df.round(2)  # remaining food
                                      type  remaining_days  quantity
-        0     fresh_fruits_and_vegetables              14      7.00
-        1                   fresh_protein              10      7.00
+        0                         staples             180      7.00
+        1     fresh_fruits_and_vegetables              14      7.00
         2  packaged_fruits_and_vegetables             358      0.06
         3  packaged_fruits_and_vegetables             359      3.47
         4  packaged_fruits_and_vegetables             360      3.47
-        5                packaged_protein             179      0.06
-        6                packaged_protein             180      6.94
-        7                         staples             180      7.00
+        5                   fresh_protein              10      7.00
+        6                packaged_protein             179      0.06
+        7                packaged_protein             180      6.94
         >>> b = Food(5000)
-        >>> b.subtract({k: v+7 for k, v in stock.items()})
+        >>> b.subtract({k: v+7 for k, v in q.items()})
         Traceback (most recent call last):
         ValueError: The fresh_fruits_and_vegetables you ordered does not exist or is not sufficient in stock
         >>> b.df["quantity"].sum() == 5000  # Subtraction failed, inventory remains the same
         True
         """
-        # There may be a better way to implement this
-        stock = Food.get_quantity(self.df)
-        self.sort_by_freshness(ascending=True)
-        remain = pd.DataFrame()
+        quantity = Food.get_quantity(self.df)
+        #self.sort_by_freshness(ascending=True)
         for tp, demand in order.items():
             if demand <= 0:
                 continue
-            if (tp not in stock) or (demand > stock[tp]):
+            if (tp not in quantity) or (demand > quantity[tp]):
                 raise ValueError(f"The {tp} you ordered does not exist or is not sufficient in stock")
-            type_df = self.df[self.df["type"] == tp].reset_index(drop=True)
-            cum_sum = type_df["quantity"].cumsum()
-            # Due to float precision, pandas sometimes fail to evaluate (cumulative sum >= demand) as True when they
-            # should be numerically equal. So loosen the condition a bit
-            pivot = cum_sum.lt(demand - 1e-7).idxmin()
-            type_df.loc[pivot, "quantity"] = (cum_sum[pivot] - demand)
-            type_df = type_df[pivot:]
-            remain = pd.concat([remain, type_df])
-        self.df = remain.reset_index(drop=True)
+
+        order = pd.DataFrame(order.items(), columns=["type", "demand"])
+        stock = self.df.copy()
+        stock = stock.merge(order, on="type", how="left")
+        stock["cum_sum"] = stock.groupby("type")["quantity"].cumsum()
+        stock["condition"] = stock["cum_sum"] >= (stock["demand"] - 1e-7)
+        pivot = stock.groupby("type")["condition"].idxmax().reset_index().rename(columns={"condition": "pivot"})
+        stock = stock.merge(pivot, on="type", how="left")
+        sent = stock.loc[stock.index <= stock["pivot"]]
+        stock = stock.loc[stock.index >= stock["pivot"]]
+        sent.loc[sent.index == sent["pivot"], "quantity"] -= sent.loc[sent.index == sent["pivot"], "cum_sum"] - \
+                                                             sent.loc[sent.index == sent["pivot"], "demand"]
+        stock.loc[stock.index == stock["pivot"], "quantity"] = stock.loc[stock.index == stock["pivot"], "cum_sum"] - stock.loc[
+            stock.index == stock["pivot"], "demand"]
+        sent = sent[["type", "remaining_days", "quantity"]].reset_index(drop=True)
+        stock = stock[["type", "remaining_days", "quantity"]].reset_index(drop=True)
+        self.df = stock
+        return Food(sent)
+
 
 
