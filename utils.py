@@ -60,19 +60,15 @@ class Food:
         Columns: [type, remaining_days, quantity]
         Index: []
         >>> a = Food(5000).df
-        >>> a
+        >>> a  # doctest: +ELLIPSIS
                          type  remaining_days  quantity
         0             staples               1  8.333333
         1             staples               2  8.333333
         2             staples               3  8.333333
-        3             staples               4  8.333333
-        4             staples               5  8.333333
-        ..                ...             ...       ...
-        739  packaged protein             176  6.944444
-        740  packaged protein             177  6.944444
-        741  packaged protein             178  6.944444
-        742  packaged protein             179  6.944444
-        743  packaged protein             180  6.944444
+        ...
+        741  packaged_protein             178  6.944444
+        742  packaged_protein             179  6.944444
+        743  packaged_protein             180  6.944444
         <BLANKLINE>
         [744 rows x 3 columns]
         >>> a.equals(Food(a).df)
@@ -138,23 +134,30 @@ class Food:
         :return:
         >>> a = Food(5000)
         >>> a.sort_by_freshness()
-        >>> a.df
+        >>> a.df  # doctest: +ELLIPSIS
                                     type  remaining_days   quantity
-        193  fresh fruits and vegetables              14  35.714286
-        192  fresh fruits and vegetables              13  35.714286
-        191  fresh fruits and vegetables              12  35.714286
-        190  fresh fruits and vegetables              11  35.714286
-        189  fresh fruits and vegetables              10  35.714286
-        ..                           ...             ...        ...
-        4                        staples               5   8.333333
-        3                        staples               4   8.333333
-        2                        staples               3   8.333333
-        1                        staples               2   8.333333
-        0                        staples               1   8.333333
+        0    fresh_fruits_and_vegetables              14  35.714286
+        1    fresh_fruits_and_vegetables              13  35.714286
+        2    fresh_fruits_and_vegetables              12  35.714286
+        ...
+        741                      staples               3   8.333333
+        742                      staples               2   8.333333
+        743                      staples               1   8.333333
         <BLANKLINE>
         [744 rows x 3 columns]
         """
-        self.df = self.df.sort_values(by=["type", "remaining_days"], ascending=[True, ascending])
+        self.df = self.df.sort_values(by=["type", "remaining_days"], ascending=[True, ascending]).reset_index(drop=True)
+
+    @classmethod
+    def get_quantity(cls, data) -> Dict[str, float]:
+        """
+
+        :param data:
+        :return:
+        """
+        if isinstance(data, Food):
+            data = data.df
+        return data.groupby(["type"])["quantity"].agg("sum").to_dict()
 
     def quality_control(self, num_days=1) -> Dict[str, float]:
         """ Subtract some days from the remaining shelf life of the food, remove the expired food from the inventory,
@@ -176,8 +179,7 @@ class Food:
         self.df["remaining_days"] -= num_days
         mask = self.df["remaining_days"] <= 0
         waste = self.df[mask]
-        #waste_counter = waste.groupby(["type"])["quantity"].agg("sum")["quantity"].to_dict()
-        waste_counter = waste.groupby(["type"])["quantity"].agg("sum").to_dict()
+        waste_counter = Food.get_quantity(waste)
         self.df = self.df[~mask]
         return waste_counter
 
@@ -193,16 +195,50 @@ class Food:
         self.df = self.df.set_index(["type", "remaining_days"]).add(other.set_index(["type", "remaining_days"]),
                                                                     fill_value=0).reset_index()
 
-    def subtract(self, other) -> None:
+    def subtract(self, order: Dict[str, float]) -> None:
         """
         Subtract an existing batch of food from inventory.
         To do: implement a version where only demand of each type is known, and shelf life are not specified.
-        :param other:
+        :param order:
         :return:
+        >>> a = Food(5000)
+        >>> stock = Food.get_quantity(a.df)
+        >>> order = {k: v-7 for k, v in stock.items()}  # Take away all but 7 pounds in each type
+        >>> a.subtract(order)
+        >>> a.df.round(2)
+                                     type  remaining_days  quantity
+        0     fresh_fruits_and_vegetables              14      7.00
+        1                   fresh_protein              10      7.00
+        2  packaged_fruits_and_vegetables             358      0.06
+        3  packaged_fruits_and_vegetables             359      3.47
+        4  packaged_fruits_and_vegetables             360      3.47
+        5                packaged_protein             179      0.06
+        6                packaged_protein             180      6.94
+        7                         staples             180      7.00
+        >>> b = Food(5000)
+        >>> b.subtract({k: v+7 for k, v in stock.items()})
+        Traceback (most recent call last):
+        ValueError: The fresh_fruits_and_vegetables you ordered does not exist or is not sufficient in stock
+        >>> b.df["quantity"].sum() == 5000  # Subtraction failed, inventory remains the same
+        True
         """
-        if isinstance(other, Food):
-            other = other.df
-        self.df = self.df.set_index(["type", "remaining_days"]).sub(other.set_index(["type", "remaining_days"]),
-                                                                    fill_value=0).reset_index()
+        # There may be a better way to implement this
+        stock = Food.get_quantity(self.df)
+        self.sort_by_freshness(ascending=True)
+        remain = pd.DataFrame()
+        for tp, demand in order.items():
+            if demand <= 0:
+                continue
+            if (tp not in stock) or (demand > stock[tp]):
+                raise ValueError(f"The {tp} you ordered does not exist or is not sufficient in stock")
+            type_df = self.df[self.df["type"] == tp].reset_index(drop=True)
+            cum_sum = type_df["quantity"].cumsum()
+            # Due to float precision, pandas sometimes fail to evaluate (cumulative sum >= demand) as True when they
+            # should be numerically equal. So loosen the condition a bit
+            pivot = cum_sum.lt(demand - 1e-7).idxmin()
+            type_df.loc[pivot, "quantity"] = (cum_sum[pivot] - demand)
+            type_df = type_df[pivot:]
+            remain = pd.concat([remain, type_df])
+        self.df = remain.reset_index(drop=True)
 
 
