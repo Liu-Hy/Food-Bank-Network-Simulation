@@ -130,7 +130,7 @@ class Food:
         df = pd.DataFrame({"type": type, "remaining_days": remaining_days, "quantity": quantity})
         return Food(df)
 
-    def sort_by_freshness(self, ascending=False, inplace=True):
+    def sort_by_freshness(self, reverse=False, inplace=True):
         """
         Sort the food in each category by the remaining shelf life. Assume that clients prefer the freshest food,
         whereas food bank gives out food that is going to expire in order to reduce waste.
@@ -149,7 +149,7 @@ class Food:
         <BLANKLINE>
         [744 rows x 3 columns]
         """
-        sorted_df = self.df.sort_values(by=["type", "remaining_days"], ascending=[True, ascending]).reset_index(
+        sorted_df = self.df.sort_values(by=["type", "remaining_days"], ascending=[True, reverse]).reset_index(
             drop=True)
         if not inplace:
             return Food(sorted_df)
@@ -200,48 +200,48 @@ class Food:
 
     def subtract(self, order: Dict[str, float]):
         """
-        Subtract an existing batch of food from stock, and return the order with specific remaining days.
+        Subtract some quantity of food from stock, and return the Food object with that quantity.
         :param order:
         :return:
-        >>> a = Food(5000)
-        >>> q = a.get_quantity()
+        >>> food = Food(5000)
+        >>> q = food.get_quantity()
         >>> order = {k: v-7 for k, v in q.items()}  # Take away all but 7 pounds in each type
-        >>> sent = a.subtract(order).sort_by_freshness(inplace=False)
-        >>> sent.df[sent.df["type"] == STP].round(2)  # doctest: +ELLIPSIS
+        >>> sent = food.subtract(order).sort_by_freshness(inplace=False)
+        >>> food.df.round(3)  # remaining food
+                                     type  remaining_days  quantity
+        0     fresh_fruits_and_vegetables              14     7.000
+        1                   fresh_protein              10     7.000
+        2  packaged_fruits_and_vegetables             358     0.056
+        3  packaged_fruits_and_vegetables             359     3.472
+        4  packaged_fruits_and_vegetables             360     3.472
+        5                packaged_protein             179     0.056
+        6                packaged_protein             180     6.944
+        7                         staples             180     7.000
+        >>> sent.df[sent.df["type"] == STP].round(3)  # doctest: +ELLIPSIS
                 type  remaining_days  quantity
-        561  staples             180      1.33
-        562  staples             179      8.33
-        563  staples             178      8.33
+        561  staples             180     1.333
+        562  staples             179     8.333
+        563  staples             178     8.333
         ...
         <BLANKLINE>
         [180 rows x 3 columns]
-        >>> sent.df[sent.df["type"] == PPT].round(2)  # doctest: +ELLIPSIS
+        >>> sent.df[sent.df["type"] == PPT].round(3)  # doctest: +ELLIPSIS
                          type  remaining_days  quantity
-        382  packaged_protein             179      6.89
-        383  packaged_protein             178      6.94
-        384  packaged_protein             177      6.94
+        382  packaged_protein             179     6.889
+        383  packaged_protein             178     6.944
+        384  packaged_protein             177     6.944
         ...
         <BLANKLINE>
         [179 rows x 3 columns]
-        >>> a.df.round(2)  # remaining food
-                                     type  remaining_days  quantity
-        0                         staples             180      7.00
-        1     fresh_fruits_and_vegetables              14      7.00
-        2  packaged_fruits_and_vegetables             358      0.06
-        3  packaged_fruits_and_vegetables             359      3.47
-        4  packaged_fruits_and_vegetables             360      3.47
-        5                   fresh_protein              10      7.00
-        6                packaged_protein             179      0.06
-        7                packaged_protein             180      6.94
-        >>> b = Food(5000)
-        >>> b.subtract({k: v+7 for k, v in q.items()})
+        >>> food2 = Food(5000)
+        >>> food2.subtract({k: v+7 for k, v in q.items()})
         Traceback (most recent call last):
         ValueError: The "fresh_fruits_and_vegetables" you ordered does not exist or is not sufficient in stock
-        >>> b.df["quantity"].sum() == 5000  # Subtraction failed, stock remains the same
+        >>> food2.df["quantity"].sum() == 5000  # Subtraction failed, stock remains the same
         True
         """
         quantity = self.get_quantity()
-        #self.sort_by_freshness()
+        self.sort_by_freshness(reverse=True)
         for tp, demand in order.items():
             if demand <= 0:
                 continue
@@ -252,16 +252,19 @@ class Food:
         stock = self.df.copy()
         stock = stock.merge(order, on="type", how="left")
         stock["cum_sum"] = stock.groupby("type")["quantity"].cumsum()
-        stock["condition"] = stock["cum_sum"] >= (stock["demand"] - 1e-7)
-        pivot = stock.groupby("type")["condition"].idxmax().reset_index().rename(columns={"condition": "pivot"})
+        # Due to float precision, loosen the condition a bit
+        stock["satisfied"] = stock["cum_sum"] >= (stock["demand"] - 1e-7)
+        # Get the first row in each type where the demand is satisfied
+        pivot = stock.groupby("type")["satisfied"].idxmax().reset_index().rename(columns={"satisfied": "pivot"})
         stock = stock.merge(pivot, on="type", how="left")
+        # Split into two parts, and divide the quantity of this row
         sent = stock.loc[stock.index <= stock["pivot"]]
         stock = stock.loc[stock.index >= stock["pivot"]]
-        sent.loc[sent.index == sent["pivot"], "quantity"] -= sent.loc[sent.index == sent["pivot"], "cum_sum"] - \
-                                                             sent.loc[sent.index == sent["pivot"], "demand"]
         stock.loc[stock.index == stock["pivot"], "quantity"] = stock.loc[stock.index == stock["pivot"], "cum_sum"] - \
                                                                stock.loc[
                                                                    stock.index == stock["pivot"], "demand"]
+        sent.loc[sent.index == sent["pivot"], "quantity"] -= sent.loc[sent.index == sent["pivot"], "cum_sum"] - \
+                                                             sent.loc[sent.index == sent["pivot"], "demand"]
         sent = sent[["type", "remaining_days", "quantity"]].reset_index(drop=True)
         stock = stock[["type", "remaining_days", "quantity"]].reset_index(drop=True)
         self.df = stock
