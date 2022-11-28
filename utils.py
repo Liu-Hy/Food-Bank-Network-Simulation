@@ -1,7 +1,10 @@
+from typing import Dict
+
 import numpy as np
 import pandas as pd
-from typing import Dict
+
 from constants import *
+
 
 def mod_beta_random(low: float, high: float, mean: float, std: float, samples: int) -> np.ndarray:
     """
@@ -50,31 +53,32 @@ class Calendar:
 
 
 class Food:
-    price: dict # dictionary with TYPE (str) float pairs. Set by Simulation.
-    def __init__(self, inventory=None):
+    price: dict  # dictionary with TYPE (str) float pairs. Set by Simulation.
+
+    def __init__(self, stock=None):
         """
         Initialize a Food object which is either empty, or based on a dataframe or total pounds of food.
-        :param inventory:
+        :param stock:
         >>> Food().df
         Empty DataFrame
         Columns: [type, remaining_days, quantity]
         Index: []
         >>> a = Food(5000).df
-        >>> a  # doctest: +ELLIPSIS
+        >>> a.round(2)  # doctest: +ELLIPSIS
                          type  remaining_days  quantity
-        0             staples               1  8.333333
-        1             staples               2  8.333333
-        2             staples               3  8.333333
+        0             staples               1      8.33
+        1             staples               2      8.33
+        2             staples               3      8.33
         ...
-        741  packaged_protein             178  6.944444
-        742  packaged_protein             179  6.944444
-        743  packaged_protein             180  6.944444
+        741  packaged_protein             178      6.94
+        742  packaged_protein             179      6.94
+        743  packaged_protein             180      6.94
         <BLANKLINE>
         [744 rows x 3 columns]
         >>> a.equals(Food(a).df)
         True
         """
-        if inventory is None:
+        if stock is None:
             self.df = pd.DataFrame(columns=[
                 "type",
                 "remaining_days",
@@ -84,16 +88,16 @@ class Food:
                 "remaining_days": int,
                 "quantity": float
             })
-        elif isinstance(inventory, pd.DataFrame):
-            self.df = inventory
-        elif isinstance(inventory, (float, int)):
-            assert inventory > 0
+        elif isinstance(stock, pd.DataFrame):
+            self.df = stock
+        elif isinstance(stock, (float, int)):
+            assert stock > 0
             type = []
             remaining_days = []
             quantity = []
             for t in TYPES.keys():
                 # Assume that the remaining shelf lives of foods are uniformly distributed within [1, max_days]
-                q = inventory * TYPES[t]["proportion"] / TYPES[t]["max_days"]
+                q = stock * TYPES[t]["proportion"] / TYPES[t]["max_days"]
                 for d in range(1, TYPES[t]["max_days"] + 1):
                     type.append(t)
                     remaining_days.append(d)
@@ -101,7 +105,6 @@ class Food:
             self.df = pd.DataFrame({"type": type, "remaining_days": remaining_days, "quantity": quantity})
         else:
             raise ValueError("Invalid input for initialization")
-
 
     @classmethod
     def generate_donation(cls, mean_total: float):
@@ -134,37 +137,35 @@ class Food:
         :return:
         >>> a = Food(5000)
         >>> a.sort_by_freshness()
-        >>> a.df  # doctest: +ELLIPSIS
-                                    type  remaining_days   quantity
-        0    fresh_fruits_and_vegetables              14  35.714286
-        1    fresh_fruits_and_vegetables              13  35.714286
-        2    fresh_fruits_and_vegetables              12  35.714286
+        >>> a.df.round(2) # doctest: +ELLIPSIS
+                                    type  remaining_days  quantity
+        0    fresh_fruits_and_vegetables              14     35.71
+        1    fresh_fruits_and_vegetables              13     35.71
+        2    fresh_fruits_and_vegetables              12     35.71
         ...
-        741                      staples               3   8.333333
-        742                      staples               2   8.333333
-        743                      staples               1   8.333333
+        741                      staples               3      8.33
+        742                      staples               2      8.33
+        743                      staples               1      8.33
         <BLANKLINE>
         [744 rows x 3 columns]
         """
-        sorted_df = self.df.sort_values(by=["type", "remaining_days"], ascending=[True, ascending]).reset_index(drop=True)
+        sorted_df = self.df.sort_values(by=["type", "remaining_days"], ascending=[True, ascending]).reset_index(
+            drop=True)
         if not inplace:
             return Food(sorted_df)
         self.df = sorted_df
 
-    @classmethod
-    def get_quantity(cls, data) -> Dict[str, float]:
+    def get_quantity(self) -> Dict[str, float]:
         """
 
         :param data:
         :return:
         """
-        if isinstance(data, Food):
-            data = data.df
-        return data.groupby(["type"])["quantity"].agg("sum").to_dict()
+        return self.df.groupby(["type"])["quantity"].agg("sum").to_dict()
 
     def quality_control(self, num_days=1) -> Dict[str, float]:
-        """ Subtract some days from the remaining shelf life of the food, remove the expired food from the inventory,
-        and record the quantity of waste in each category.
+        """ Subtract some days from the remaining shelf life of the food, remove the expired food from stock, and record
+        the quantity of waste in each category.
         :param num_days: number of days since the last quality check
         :return: a dictionary storing the wasted food in each category
         >>> a = Food(5000)
@@ -181,19 +182,16 @@ class Food:
         """
         self.df["remaining_days"] -= num_days
         mask = self.df["remaining_days"] <= 0
-        waste = self.df[mask]
-        waste_counter = Food.get_quantity(waste)
+        waste = Food(self.df[mask])
+        waste_counter = waste.get_quantity()
         self.df = self.df[~mask]
         return waste_counter
 
     def add(self, other) -> None:
-        """ Add a new batch of food to inventory. Merge food items with same type and remaining days.
+        """ Add a new batch of food to stock. Merge food items with same type and remaining days.
         Fully tested on jupyter notebook. Still thinking of how to present tests concisely in doctrings
         :param other:
         :return:
-        178           staples             179      8.333333
-        179           staples             180      1.333333
-        ...
         """
         if isinstance(other, Food):
             other = other.df
@@ -202,27 +200,26 @@ class Food:
 
     def subtract(self, order: Dict[str, float]):
         """
-        Subtract an existing batch of food from inventory, and return the order with specific remaining days.
-        Need less confusing names for methods and parameters
+        Subtract an existing batch of food from stock, and return the order with specific remaining days.
         :param order:
         :return:
         >>> a = Food(5000)
-        >>> q = Food.get_quantity(a.df)
+        >>> q = a.get_quantity()
         >>> order = {k: v-7 for k, v in q.items()}  # Take away all but 7 pounds in each type
         >>> sent = a.subtract(order).sort_by_freshness(inplace=False)
-        >>> sent.df[sent.df["type"] == STP]  # doctest: +ELLIPSIS
+        >>> sent.df[sent.df["type"] == STP].round(2)  # doctest: +ELLIPSIS
                 type  remaining_days  quantity
-        561  staples             180  1.333333
-        562  staples             179  8.333333
-        563  staples             178  8.333333
+        561  staples             180      1.33
+        562  staples             179      8.33
+        563  staples             178      8.33
         ...
         <BLANKLINE>
         [180 rows x 3 columns]
-        >>> sent.df[sent.df["type"] == PPT]  # doctest: +ELLIPSIS
+        >>> sent.df[sent.df["type"] == PPT].round(2)  # doctest: +ELLIPSIS
                          type  remaining_days  quantity
-        382  packaged_protein             179  6.888889
-        383  packaged_protein             178  6.944444
-        384  packaged_protein             177  6.944444
+        382  packaged_protein             179      6.89
+        383  packaged_protein             178      6.94
+        384  packaged_protein             177      6.94
         ...
         <BLANKLINE>
         [179 rows x 3 columns]
@@ -239,17 +236,17 @@ class Food:
         >>> b = Food(5000)
         >>> b.subtract({k: v+7 for k, v in q.items()})
         Traceback (most recent call last):
-        ValueError: The fresh_fruits_and_vegetables you ordered does not exist or is not sufficient in stock
-        >>> b.df["quantity"].sum() == 5000  # Subtraction failed, inventory remains the same
+        ValueError: The "fresh_fruits_and_vegetables" you ordered does not exist or is not sufficient in stock
+        >>> b.df["quantity"].sum() == 5000  # Subtraction failed, stock remains the same
         True
         """
-        quantity = Food.get_quantity(self.df)
-        #self.sort_by_freshness(ascending=True)
+        quantity = self.get_quantity()
+        #self.sort_by_freshness()
         for tp, demand in order.items():
             if demand <= 0:
                 continue
             if (tp not in quantity) or (demand > quantity[tp]):
-                raise ValueError(f"The {tp} you ordered does not exist or is not sufficient in stock")
+                raise ValueError(f"The \"{tp}\" you ordered does not exist or is not sufficient in stock")
 
         order = pd.DataFrame(order.items(), columns=["type", "demand"])
         stock = self.df.copy()
@@ -262,12 +259,10 @@ class Food:
         stock = stock.loc[stock.index >= stock["pivot"]]
         sent.loc[sent.index == sent["pivot"], "quantity"] -= sent.loc[sent.index == sent["pivot"], "cum_sum"] - \
                                                              sent.loc[sent.index == sent["pivot"], "demand"]
-        stock.loc[stock.index == stock["pivot"], "quantity"] = stock.loc[stock.index == stock["pivot"], "cum_sum"] - stock.loc[
-            stock.index == stock["pivot"], "demand"]
+        stock.loc[stock.index == stock["pivot"], "quantity"] = stock.loc[stock.index == stock["pivot"], "cum_sum"] - \
+                                                               stock.loc[
+                                                                   stock.index == stock["pivot"], "demand"]
         sent = sent[["type", "remaining_days", "quantity"]].reset_index(drop=True)
         stock = stock[["type", "remaining_days", "quantity"]].reset_index(drop=True)
         self.df = stock
         return Food(sent)
-
-
-
