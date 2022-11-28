@@ -14,11 +14,11 @@ class FoodPantry:
         self.calendar = Calendar()
         self.food = Food()
         self.clients = self.generate_clients()
-        self.base_secured_rate = self.generate_base_secured()
+        self.base_secure_rate = self.generate_base_secure()
         self.operation_day = rng.integers(0, 7)
         self.previous_record = None
 
-    def generate_clients(self):
+    def generate_clients(self) -> pd.DataFrame:
         columns = [("num_people", ""), (STP, "demand"), (STP, "secured"), (STP, "lacking"), (STP, "purchased"),
                    (FV, "demand"), (FV, "secured"), (FV, "lacking"), (FV, "purchased_fresh"),
                    (FV, "purchased_packaged"),
@@ -32,7 +32,7 @@ class FoodPantry:
             clients[(type, "demand")] = mod_beta_random(low, high, mean, std, self.households) * clients[("num_people", "")]
         return clients
 
-    def generate_base_secured(self):
+    def generate_base_secure(self) -> pd.DataFrame:
         rates = rng.uniform(0.3, 0.8, (self.households, 3))
         return pd.DataFrame(rates, columns=[STP, FV, PT])
 
@@ -41,8 +41,9 @@ class FoodPantry:
         price_ratio = {STP: 1.1, FV: 1.2, PT: 0.9}
         factor = {k: (v ** ELASTICITY[k]) for k, v in price_ratio.items()}
         for type in ELASTICITY.keys():
-            self.clients[(type, "secured")] = self.base_secured_rate[type] * factor[type]
+            self.clients[(type, "secured")] = self.base_secure_rate[type] * factor[type]
             self.clients[(type, "lacking")] = self.clients[(type, "demand")] * (1 - self.clients[(type, "secured")]) + rng.normal(0, 100, self.households)
+        # remove the purchase record of the previous week
         self.clients.loc[:, (slice(None), ['purchased', 'purchased_fresh', 'purchased_packaged'])] = 0.
 
     def run_one_day(self):
@@ -51,7 +52,7 @@ class FoodPantry:
             return
         est_demand = self.estimate_demand()
         order = self.make_order(est_demand)
-        # Client needs and queuing order changed
+        # Client needs and queuing order changes every week
         self.initialize_weekly_demand()
         self.clients = self.clients.sample(frac=1).reset_index(drop=True)
         # Prepare food
@@ -62,7 +63,7 @@ class FoodPantry:
         return waste, order, utility
 
     def estimate_demand(self) -> Dict[str, float]:
-        """Estimate client demand this week based on prior experience"""
+        """Predict client demand this week based on prior experience"""
         if self.previous_record is None:
             num_clients = self.clients[("num_people", "")].sum()
             est_demand = {k: (v * num_clients) for k, v in PERSON_WEEKLY_DEMAND.items()}
@@ -71,7 +72,7 @@ class FoodPantry:
 
     def make_order(self, est_demand: Dict[str, float]):
         """ Make an order to the food bank subject to estimated demand and the current inventory.
-        Request fresh food when it is available, otherwise request packaged food to fill the demand. """
+        Request fresh food when it is available, otherwise request packaged food to meet the demand. """
         order = dict()
         stock = self.parent.df.groupby(["type"])["quantity"].agg("sum").to_dict()
         order[STP] = min(est_demand[STP], stock[STP])
