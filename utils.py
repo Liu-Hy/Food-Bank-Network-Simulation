@@ -118,10 +118,10 @@ class Food:
         quantity = []
         remaining_days = []
         for t in TYPES.keys():
-            # Assume that the remaining shelf lives of foods are uniformly distributed within [1, max_days]
             mean = mean_total * TYPES[t]["proportion"]
             low, high, stdev = 0.3 * mean, 5 * mean, 0.5 * mean
             beta = mod_beta_random(low, high, mean, stdev, 1).item()
+            # Assume that the remaining shelf lives of foods are uniformly distributed within [1, max_days]
             q = beta / TYPES[t]["max_days"]
             for d in range(1, TYPES[t]["max_days"] + 1):
                 type.append(t)
