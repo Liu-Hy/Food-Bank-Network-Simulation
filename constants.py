@@ -24,5 +24,21 @@ FAMILY_DISTRIBUTION = [0.2845, 0.3503, 0.1503, 0.1239, 0.0583, 0.0203] + ([0.003
 ELASTICITY = {STP: -0.3, FV: -0.5, PT: -0.6}
 
 class Global:
+  """Setters should only be used by simulation. Getters can be used by other classes.
+  """
+  _current_day:int = 0
+
+  @classmethod
+  def add_day(self):
+    """Updates current day, only to be used by simulation.
+    """
+    self._current_day += 1
   
-  pass
+  @classmethod
+  def get_day(self):
+    return self._current_day
+
+if __name__ == '__main__':
+  print(Global.get_day())
+  print(Global.add_day())
+  print(Global.get_day())
