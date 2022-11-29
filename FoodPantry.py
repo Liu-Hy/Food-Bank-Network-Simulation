@@ -5,7 +5,7 @@ import pandas as pd
 
 from FoodBank import FoodBank
 from constants import *
-from utils import Calendar, Food, mod_beta_random
+from utils import Food, mod_beta_random
 
 rng = np.random.default_rng()
 
@@ -55,8 +55,7 @@ class FoodPantry:
         self.clients.loc[:, (slice(None), ['purchased', 'purchased_fresh', 'purchased_packaged'])] = 0.
 
     def run_one_day(self):
-        self.calendar.update()
-        if self.calendar.day_of_week != self.operation_day:
+        if (Global.get_day() % 7) != self.operation_day:
             return
         est_demand = self.estimate_demand()
         order = self.make_order(est_demand)

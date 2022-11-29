@@ -40,17 +40,6 @@ def mod_beta_random(low: float, high: float, mean: float, std: float, samples: i
     return beta
 
 
-class Calendar:
-    def __init__(self, day=0):
-        self.day = day
-        self.week = day // 7
-        self.day_of_week = day % 7
-
-    def update(self, num_days=1):
-        self.day += num_days
-        self.week = self.day // 7
-        self.day_of_week = self.day % 7
-
 
 class Food:
     price: dict  # dictionary with TYPE (str) float pairs. Set by Simulation.
