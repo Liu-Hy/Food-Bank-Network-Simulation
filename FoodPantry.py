@@ -46,10 +46,13 @@ class FoodPantry:
         factor = {k: (v ** ELASTICITY[k]) for k, v in price_ratio.items()}
         for tp in ELASTICITY.keys():
             self.clients[(tp, "secured")] = self.base_secure_rate[tp] * factor[tp]
+            # this is wrong, "base_secure_rate" should be shuffled together with the client df.
             self.clients[(tp, "demand")] = self.clients[(tp, "total")] * (
                         1 - self.clients[(tp, "secured")]) + rng.normal(0, 100, self.households)
             if "demand_alt" in self.clients[tp]:
-                self.clients[(tp, "demand_alt")] = 0
+                self.clients[(tp, "demand_alt")] = 0.
+        # remove the purchase record of the previous week
+        self.clients.loc[:, (slice(None), ['purchased', 'purchased_fresh', 'purchased_packaged'])] = 0.
 
     def run_one_day(self):
         self.calendar.update()
@@ -90,70 +93,65 @@ class FoodPantry:
         order[PFV] = min(est_demand[FV] - order[FFV], stock[PFV])
         order[FPT] = min(est_demand[PT], stock[FPT])
         order[PFV] = min(est_demand[PT] - order[FPT], stock[PFV])
+        # To do: set limit on fresh food based on the gap between est_demand and order
         return order
 
+    def allocate_food(self, tp, dmd_col, pcs_col):
+        """
+        Clients line up to purchase food. Record their purchase and update the pantry inventory
+        :param tp:
+        :param dmd_col: the name of the column from which we read the client demand
+        :param pcs_col: The name of the column where we record the purchases of clients
+        :return:
+        """
+        type_df = self.food.df[self.food.df["type"] == tp].reset_index(drop=True)
+        cum_stock = type_df["quantity"].cumsum()
+        stock = cum_stock.iat[-1]
+        cum_demand = self.clients[dmd_col].cumsum()
+        demand = cum_demand.iat[-1]
+        if stock >= demand:
+            pivot = cum_stock.ge(demand).idxmax()
+            type_df.loc[pivot, "quantity"] = cum_stock[pivot] - demand
+            type_df = type_df[pivot:]
+            self.clients.loc[:, pcs_col] = self.clients.loc[:, dmd_col]
+        else:
+            type_df = pd.DataFrame()
+            pivot = cum_demand.gt(stock).idxmax()
+            self.clients.loc[:pivot, pcs_col] = self.clients.loc[:pivot, dmd_col]
+            self.clients.loc[pivot, pcs_col] = self.clients.loc[pivot, dmd_col] - (cum_demand[pivot] - stock)
+        return type_df
+
     def hold_pantry(self):
-        limit = 200
-        # remove the purchase record of the previous week
-        self.clients.loc[:, (slice(None), ['purchased', 'purchased_fresh', 'purchased_packaged'])] = 0.
-
-        type_df = self.food.df[self.food.df["type"] == STP].reset_index(drop=True)
-        stock = type_df["quantity"].sum()
-        demand = self.clients[(STP, "demand")].sum()
-        if stock >= demand:
-            cum_stock = type_df["quantity"].cumsum()
-            pivot = cum_stock.ge(demand).idxmax()
-            type_df.loc[pivot, "quantity"] = cum_stock[pivot] - demand
-            type_df = type_df[pivot:]
-            self.clients.loc[:, (STP, "purchased")] = self.clients.loc[:, (STP, "demand")]
-        else:
-            type_df = pd.DataFrame()
-            cum_demand = self.clients[(STP, "demand")].cumsum()
-            pivot = cum_demand.gt(stock).idxmax()
-            self.clients.loc[:pivot, (STP, "purchased")] = self.clients.loc[:pivot, (STP, "demand")]
-            self.clients.loc[pivot, (STP, "purchased")] = self.clients.loc[pivot, (STP, "demand")] - (cum_demand[pivot] - stock)
-
-        # for fresh fruits and vegetables
-        type_df = self.food.df[self.food.df["type"] == FFV].reset_index(drop=True)
-        type_df2 = self.food.df[self.food.df["type"] == PFV].reset_index(drop=True)
-        self.clients.loc[self.clients[(FV, "demand")] > limit, "demand_alt"] = self.clients.loc[self.clients[(FV, "demand")] > limit, "demand"] - limit
+        limit = 20
+        """df_ls = []
+        self.allocate_food(STP, (STP, "demand"), (STP, "purchased"))
+        # Transfer out-of-limit demand for fresh food to packaged food
+        self.clients.loc[self.clients[(FV, "demand")] > limit, "demand_alt"] = self.clients.loc[self.clients[(
+        FV, "demand")] > limit, "demand"] - limit
         self.clients.loc[self.clients[(FV, "demand")] > limit, "demand"] = limit
-        stock = type_df["quantity"].sum()
-        demand = self.clients[(FV, "demand")].sum()
-        if stock >= demand:
-            cum_stock = type_df["quantity"].cumsum()
-            pivot = cum_stock.ge(demand).idxmax()
-            type_df.loc[pivot, "quantity"] = cum_stock[pivot] - demand
-            type_df = type_df[pivot:]
-            self.clients.loc[:, (FV, "purchased_fresh")] = self.clients.loc[:, (FV, "demand")]
-        else:
-            type_df = pd.DataFrame()
-            cum_demand = self.clients[(FV, "demand")].cumsum()
-            pivot = cum_demand.gt(stock).idxmax()
-            self.clients.loc[:pivot, (FV, "purchased_fresh")] = self.clients.loc[:pivot, (FV, "demand")]
-            shortage = cum_demand[pivot] - stock
-            self.clients.loc[pivot, (FV, "purchased_fresh")] = self.clients.loc[pivot, (FV, "demand")] - shortage
+        self.allocate_food(FFV, (FV, "demand"), (FV, "purchased_fresh"))
+        # Transfer unmet demand to packaged food
+        self.clients[(FV, "demand_alt")] += (self.clients[(FV, "demand")] - self.clients[(FV, "purchased_fresh")])
+        self.allocate_food(PFV, (FV, "demand_alt"), (FV, "purchased_packaged"))"""
 
-            # transfer excess demand to packaged food
-            self.clients.loc[pivot, (FV, "demand_alt")] += shortage
-            self.clients.loc[pivot+1, (FV, "demand_alt")] += self.clients.loc[pivot+1, (FV, "demand")]
-            # repeat the process to packaged food
-            stock = type_df2["quantity"].sum()
-            demand = self.clients[(FV, "demand_alt")].sum()
-            if stock >= demand:
-                cum_stock = type_df2["quantity"].cumsum()
-                pivot = cum_stock.ge(demand).idxmax()
-                type_df2.loc[pivot, "quantity"] = cum_stock[pivot] - demand
-                type_df2 = type_df2[pivot:]
-                self.clients.loc[:, (FV, "purchased_packaged")] = self.clients.loc[:, (STP, "demand_alt")]
-            else:
-                type_df2 = pd.DataFrame()
-                cum_demand = self.clients[(STP, "demand_alt")].cumsum()
-                pivot = cum_demand.gt(stock).idxmax()
-                self.clients.loc[:pivot, (FV, "purchased_packaged")] = self.clients.loc[:pivot, (FV, "demand_alt")]
-                self.clients.loc[pivot, (FV, "purchased_packaged")] = self.clients.loc[pivot, (FV, "demand_alt")] - (
-                            cum_demand[pivot] - stock)
-        # repeat for proteins
+        types = {STP: [STP], FV: [FFV, PFV], PT: [FPT, PPT]}
+        remains = []
+        for tp, options in types.items():
+            if len(options) == 1:
+                remains.append(self.allocate_food(tp, (tp, "demand"), (tp, "purchased")))
+            elif len(options) == 2:
+                priority, alt = options
+                # Transfer out-of-limit demand for fresh food to packaged food
+                self.clients.loc[self.clients[(tp, "demand")] > limit, "demand_alt"] = self.clients.loc[self.clients[(
+                    tp, "demand")] > limit, "demand"] - limit
+                self.clients.loc[self.clients[(tp, "demand")] > limit, "demand"] = limit
+                remains.append(self.allocate_food(priority, (tp, "demand"), (tp, "purchased_fresh")))
+                # Transfer unmet demand to packaged food
+                self.clients[(tp, "demand_alt")] += (
+                            self.clients[(tp, "demand")] - self.clients[(tp, "purchased_fresh")])
+                remains.append(self.allocate_food(alt, (tp, "demand_alt"), (tp, "purchased_packaged")))
+        self.food.df = pd.concat(remains).reset_index(drop=True)
+
 
     def get_utility(self) -> float:
         """Estimate the increment in social welfare after a pantry event
