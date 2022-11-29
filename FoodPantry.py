@@ -71,7 +71,7 @@ class FoodPantry:
         self.hold_pantry()
 
         utility = self.get_utility()
-        return waste, order, utility
+        return waste, est_demand, order, utility
 
     def estimate_demand(self) -> Dict[str, float]:
         """Predict client demand this week based on prior experience"""
