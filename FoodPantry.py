@@ -110,12 +110,14 @@ class FoodPantry:
         cum_demand = self.clients[dmd_col].cumsum()
         demand = cum_demand.iat[-1]
         if stock >= demand:
+            # Get the index of the last batch of food before all demand is satisfied
             pivot = cum_stock.ge(demand).idxmax()
             type_df.loc[pivot, "quantity"] = cum_stock[pivot] - demand
             type_df = type_df[pivot:]
             self.clients.loc[:, pcs_col] = self.clients.loc[:, dmd_col]
         else:
             type_df = pd.DataFrame()
+            # Get the index of the first client who cannot get enough food
             pivot = cum_demand.gt(stock).idxmax()
             self.clients.loc[:pivot, pcs_col] = self.clients.loc[:pivot, dmd_col]
             self.clients.loc[pivot, pcs_col] = self.clients.loc[pivot, dmd_col] - (cum_demand[pivot] - stock)
@@ -146,7 +148,7 @@ class FoodPantry:
                     tp, "demand")] > limit, "demand"] - limit
                 self.clients.loc[self.clients[(tp, "demand")] > limit, "demand"] = limit
                 remains.append(self.allocate_food(priority, (tp, "demand"), (tp, "purchased_fresh")))
-                # Transfer unmet demand to packaged food
+                # After allocating fresh food, transfer the unmet demand to packaged food
                 self.clients[(tp, "demand_alt")] += (
                         self.clients[(tp, "demand")] - self.clients[(tp, "purchased_fresh")])
                 remains.append(self.allocate_food(alt, (tp, "demand_alt"), (tp, "purchased_packaged")))
