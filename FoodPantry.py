@@ -48,7 +48,7 @@ class FoodPantry:
             self.clients[(tp, "secured")] = self.base_secure_rate[tp] * factor[tp]
             # this is wrong, "base_secure_rate" should be shuffled together with the client df.
             self.clients[(tp, "demand")] = self.clients[(tp, "total")] * (
-                        1 - self.clients[(tp, "secured")]) + rng.normal(0, 100, self.households)
+                    1 - self.clients[(tp, "secured")]) + rng.normal(0, 100, self.households)
             if "demand_alt" in self.clients[tp]:
                 self.clients[(tp, "demand_alt")] = 0.
         # remove the purchase record of the previous week
@@ -68,7 +68,7 @@ class FoodPantry:
         # The demand and queuing order of clients change every week
         self.initialize_weekly_demand()
         self.clients = self.clients.sample(frac=1).reset_index(drop=True)
-        # TO DO: hold a pantry. Use aggregation instead of loops whenever possible
+        # TO DO: test the method, and make it more readable
         self.hold_pantry()
 
         utility = self.get_utility()
@@ -148,10 +148,9 @@ class FoodPantry:
                 remains.append(self.allocate_food(priority, (tp, "demand"), (tp, "purchased_fresh")))
                 # Transfer unmet demand to packaged food
                 self.clients[(tp, "demand_alt")] += (
-                            self.clients[(tp, "demand")] - self.clients[(tp, "purchased_fresh")])
+                        self.clients[(tp, "demand")] - self.clients[(tp, "purchased_fresh")])
                 remains.append(self.allocate_food(alt, (tp, "demand_alt"), (tp, "purchased_packaged")))
         self.food.df = pd.concat(remains).reset_index(drop=True)
-
 
     def get_utility(self) -> float:
         """Estimate the increment in social welfare after a pantry event
