@@ -14,7 +14,6 @@ class FoodPantry:
     def __init__(self, parent: FoodBank, households=100):
         self.parent = parent
         self.households = households
-        self.calendar = Calendar()
         self.food = Food()
         self.clients = self.generate_clients()
         self.base_secure_rate = self.generate_base_secure()

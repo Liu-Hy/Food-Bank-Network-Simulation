@@ -7,7 +7,7 @@ PPT = "packaged_protein"
 FV = "fruits_and_vegetables"
 PT = "protein"
 
-# Tentative settings
+"""Only PERSON_WEEKLY_DEMAND and FAMILY-DISTRIBUTION are accurate. Others are fabricated. """
 TYPES = {STP: {"proportion": 0.3, "max_days": 180},
          FFV: {"proportion": 0.1, "max_days": 14},
          PFV: {"proportion": 0.25, "max_days": 360},
