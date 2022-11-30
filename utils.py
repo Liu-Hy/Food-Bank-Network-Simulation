@@ -42,8 +42,6 @@ def mod_beta_random(low: float, high: float, mean: float, std: float, samples: i
 
 
 class Food:
-    price: dict  # dictionary with TYPE (str) float pairs. Set by Simulation.
-
     def __init__(self, stock=None):
         """
         Initialize a Food object which is either empty, or based on a dataframe or total pounds of food.
