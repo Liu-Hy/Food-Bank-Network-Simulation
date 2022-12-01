@@ -90,10 +90,10 @@ class FoodPantry:
         # To do: set limit on fresh food based on the gap between est_demand and order
         return order
 
-    def allocate_food(self, tp, dmd_col, pcs_col):
+    def allocate_food(self, tp, dmd_col, pcs_col) -> pd.DataFrame:
         """
-        Clients line up to purchase food. Record their purchase and update the pantry inventory
-        :param tp:
+        Clients line up to purchase one type of food. Record their purchase and update the pantry inventory.
+        :param tp: the type of food
         :param dmd_col: the name of the column from which we read the client demand
         :param pcs_col: The name of the column where we record the purchases of clients
         :return:
@@ -118,17 +118,11 @@ class FoodPantry:
         return type_df
 
     def hold_pantry(self):
+        """ Hold a pantry event. Although in reality one client shops multiple types of food at once, to avoid
+        unnecessary computation, we transform it to the equivalent process of allocating food multiple times, once for
+        each type of food.
+        """
         limit = 20
-        """df_ls = []
-        self.allocate_food(STP, (STP, "demand"), (STP, "purchased"))
-        # Transfer out-of-limit demand for fresh food to packaged food
-        self.clients.loc[self.clients[(FV, "demand")] > limit, "demand_alt"] = self.clients.loc[self.clients[(
-        FV, "demand")] > limit, "demand"] - limit
-        self.clients.loc[self.clients[(FV, "demand")] > limit, "demand"] = limit
-        self.allocate_food(FFV, (FV, "demand"), (FV, "purchased_fresh"))
-        # Transfer unmet demand to packaged food
-        self.clients[(FV, "demand_alt")] += (self.clients[(FV, "demand")] - self.clients[(FV, "purchased_fresh")])
-        self.allocate_food(PFV, (FV, "demand_alt"), (FV, "purchased_packaged"))"""
 
         types = {STP: [STP], FV: [FFV, PFV], PT: [FPT, PPT]}
         remains = []
@@ -148,7 +142,42 @@ class FoodPantry:
                 remains.append(self.allocate_food(alt, (tp, "demand_alt"), (tp, "purchased_packaged")))
         self.food.df = pd.concat(remains).reset_index(drop=True)
 
-    def get_utility(self) -> float:
+    def func(self, data: pd.Series, typ: str, param: float) -> pd.Series:
+        """
+        Food utility as a function of the proportion of demand satisfied. It should map 0 to 1, 1 to 1, and be concave
+        to reflect diminished marginal effect.
+        :param data: a pd.Series storing the proportion of food demand that is satisfied per household
+        :param typ: the type of the function, either exponential, logarithm or quadratic.
+        :param param: one additional parameter to decide the shape of the curve, e.g. the power in exponential function,
+        the quadracitc coefficient in a quadratic function.
+        :return: The element-wise utility value
+        >>> pantry = FoodPantry(None)
+        >>> portion = pd.Series(range(0, 5))
+        >>> pantry.func(portion, 0.5).round(2)
+            0    0.00
+            1    1.00
+            2    1.41
+            3    1.73
+            4    2.00
+            dtype: float64
+        """
+        return data.pow(param)
+
+    def utility_per_type(self, typ: str) -> float:
         """Estimate the increment in social welfare after a pantry event
         :return:
         """
+        assert typ in [STP, FV, PT]
+        family_size = self.clients[("num_people", "")]
+        total = self.clients[(typ, "total")]
+        secured = self.clients[(typ, "secured")]
+        if typ == STP:
+            delta = self.clients[(STP, "purchased")] / total
+            inc = (self.func(secured + delta) - self.func(secured)) * family_size
+        else:
+            portion1 = self.clients[(typ, "purchased_fresh")] / self.clients[(typ, "total")]
+            portion2 = self.clients[(typ, "purchased_packaged")] / self.clients[(typ, "total")]
+            cum1 = portion1 + secured
+            cum2 = cum1 + portion2
+            inc = (0.7 * self.func(cum2) + 0.3 * self.func(cum1) - self.func(secured)) * family_size
+        return inc
