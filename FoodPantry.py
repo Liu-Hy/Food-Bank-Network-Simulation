@@ -1,5 +1,6 @@
 from typing import Dict
 
+import math
 import numpy as np
 import pandas as pd
 
@@ -66,7 +67,7 @@ class FoodPantry:
         self.hold_pantry()
 
         utility = self.get_utility()
-        return waste, est_demand, order, utility
+        return waste, order, utility
 
     def estimate_demand(self) -> Dict[str, float]:
         """Predict client demand this week based on prior experience"""
@@ -142,32 +143,42 @@ class FoodPantry:
                 remains.append(self.allocate_food(alt, (tp, "demand_alt"), (tp, "purchased_packaged")))
         self.food.df = pd.concat(remains).reset_index(drop=True)
 
-    def func(self, data: pd.Series, typ: str, param: float) -> pd.Series:
+    def func(self, data: pd.Series, typ="exp", param=0.7) -> pd.Series:
         """
         Food utility as a function of the proportion of demand satisfied. It should map 0 to 1, 1 to 1, and be concave
         to reflect diminished marginal effect.
-        :param data: a pd.Series storing the proportion of food demand that is satisfied per household
+        :param data: a pd.Series or np.ndarray storing the proportion of food demand that is satisfied per household
         :param typ: the type of the function, either exponential, logarithm or quadratic.
         :param param: one additional parameter to decide the shape of the curve, e.g. the power in exponential function,
         the quadracitc coefficient in a quadratic function.
         :return: The element-wise utility value
         >>> pantry = FoodPantry(None)
-        >>> portion = pd.Series(range(0, 5))
-        >>> pantry.func(portion, 0.5).round(2)
-            0    0.00
-            1    1.00
-            2    1.41
-            3    1.73
-            4    2.00
-            dtype: float64
-        """
-        return data.pow(param)
+        >>> portion = pd.Series(np.arange(0, 1.2, 0.2))
+        >>> portion.round(2).values.tolist()
+        [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+        >>> pantry.func(portion).round(2).values.tolist()
+        [0.0, 0.32, 0.53, 0.7, 0.86, 1.0]
+        >>> pantry.func(portion, "quad", -0.5).round(2).values.tolist()
+        [0.0, 0.28, 0.52, 0.72, 0.88, 1.0]
+        >>> pantry.func(portion, "log", 3).round(2).values.tolist()
+        [0.0, 0.34, 0.57, 0.74, 0.88, 1.0]
+            """
+        assert typ in ["exp", "log", "quad"]
+        if typ == "exp":
+            return np.power(data, param)
+        elif typ == "log":
+            return np.log(data * param + 1) / math.log(param + 1)
+        elif typ == "quad":
+            assert -1 <= param < 0, "The quadratic coefficient should be between -1 and 0 for quadratic functions!"
+            return param * np.square(data) + (1 - param) * data
 
     def utility_per_type(self, typ: str) -> float:
-        """Estimate the increment in social welfare after a pantry event
+        """After a pantry activity, estimate the increment in the utility of one type of food per household.
+        :param typ: The type of food
         :return:
         """
         assert typ in [STP, FV, PT]
+        get_utility = []
         family_size = self.clients[("num_people", "")]
         total = self.clients[(typ, "total")]
         secured = self.clients[(typ, "secured")]
@@ -181,3 +192,14 @@ class FoodPantry:
             cum2 = cum1 + portion2
             inc = (0.7 * self.func(cum2) + 0.3 * self.func(cum1) - self.func(secured)) * family_size
         return inc
+
+    def get_utility(self) -> float:
+        """Estimate the increment in total food utility after a pantry activity
+        :return:
+        """
+        num_clients = self.clients[("num_people", "")].sum()
+        tot_util = pd.Series(np.zeros(self.households))
+        for typ in [STP, FV, PT]:
+            tot_util += self.utility_per_type(typ)
+        return tot_util.sum() / num_clients
+
