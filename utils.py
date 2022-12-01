@@ -40,7 +40,6 @@ def mod_beta_random(low: float, high: float, mean: float, std: float, samples: i
     return beta
 
 
-
 class Food:
     def __init__(self, stock=None):
         """
@@ -79,17 +78,17 @@ class Food:
             self.df = stock
         elif isinstance(stock, (float, int)):
             assert stock > 0
-            type = []
+            types = []
             remaining_days = []
             quantity = []
             for t in TYPES.keys():
                 # Assume that the remaining shelf lives of foods are uniformly distributed within [1, max_days]
-                q = stock * TYPES[t]["proportion"] / TYPES[t]["max_days"]
-                for d in range(1, TYPES[t]["max_days"] + 1):
-                    type.append(t)
-                    remaining_days.append(d)
-                    quantity.append(q)
-            self.df = pd.DataFrame({"type": type, "remaining_days": remaining_days, "quantity": quantity})
+                max_days = TYPES[t]["max_days"]
+                q = stock * TYPES[t]["proportion"] / max_days
+                types.extend([t] * max_days)
+                remaining_days.extend(list(range(1, max_days + 1)))
+                quantity.extend([q] * max_days)
+            self.df = pd.DataFrame({"type": types, "remaining_days": remaining_days, "quantity": quantity})
         else:
             raise ValueError("Invalid input for initialization")
 
@@ -101,7 +100,7 @@ class Food:
         :return:
         >>> food = Food.generate_donation(5000).df
         """
-        type = []
+        types = []
         quantity = []
         remaining_days = []
         for t in TYPES.keys():
@@ -109,12 +108,12 @@ class Food:
             low, high, stdev = 0.3 * mean, 5 * mean, 0.5 * mean
             beta = mod_beta_random(low, high, mean, stdev, 1).item()
             # Assume that the remaining shelf lives of foods are uniformly distributed within [1, max_days]
-            q = beta / TYPES[t]["max_days"]
-            for d in range(1, TYPES[t]["max_days"] + 1):
-                type.append(t)
-                remaining_days.append(d)
-                quantity.append(q)
-        df = pd.DataFrame({"type": type, "remaining_days": remaining_days, "quantity": quantity})
+            max_days = TYPES[t]["max_days"]
+            q = beta / max_days
+            types.extend([t] * max_days)
+            remaining_days.extend(list(range(1, max_days + 1)))
+            quantity.extend([q] * max_days)
+        df = pd.DataFrame({"type": types, "remaining_days": remaining_days, "quantity": quantity})
         return Food(df)
 
     def sort_by_freshness(self, reverse=False, inplace=True):
