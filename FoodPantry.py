@@ -44,7 +44,7 @@ class FoodPantry:
     def initialize_weekly_demand(self):
         """Generate each client's proportion of food secured this week, which responds to price fluctuation, and their
         demand to the food bank.
-        Change self.clients in place
+        Changes self.clients in place
         :return:
         """
         # price_ratio = Global.price.ratio
@@ -61,7 +61,7 @@ class FoodPantry:
 
     def run_one_day(self):
         """ Run the simulation for one day.
-        Change self.clients, self.food and self.parent.food in place.
+        Changes self.clients, self.food and self.parent.food in place.
         :return:
         """
         if (Global.get_day() % 7) != self.operation_day:
