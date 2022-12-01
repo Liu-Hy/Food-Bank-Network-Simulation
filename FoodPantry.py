@@ -16,18 +16,19 @@ class FoodPantry:
         self.households = households
         self.food = Food()
         self.clients = self.generate_clients()
-        self.base_secure_rate = self.generate_base_secure()
         self.operation_day = rng.integers(0, 7)
         self.previous_record = None
 
     def generate_clients(self) -> pd.DataFrame:
-        columns = [("num_people", ""), (STP, "total"), (STP, "secured"), (STP, "demand"), (STP, "purchased"),
-                   (FV, "total"), (FV, "secured"), (FV, "demand"), (FV, "demand_alt"), (FV, "purchased_fresh"),
-                   (FV, "purchased_packaged"),
-                   (PT, "total"), (PT, "secured"), (PT, "demand"), (PT, "demand_alt"), (PT, "purchased_fresh"),
-                   (PT, "purchased_packaged")]
+        columns = [("num_people", ""), (STP, "total"), (STP, "base_secured"), (STP, "secured"), (STP, "demand"),
+                   (STP, "purchased"),
+                   (FV, "total"), (FV, "base_secured"), (FV, "secured"), (FV, "demand"), (FV, "demand_alt"),
+                   (FV, "purchased_fresh"), (FV, "purchased_packaged"),
+                   (PT, "total"), (PT, "base_secured"), (PT, "secured"), (PT, "demand"), (PT, "demand_alt"),
+                   (PT, "purchased_fresh"), (PT, "purchased_packaged")]
         clients = pd.DataFrame(columns=pd.MultiIndex.from_tuples(columns))
         clients[("num_people", "")] = rng.choice(range(1, 11), self.households, p=FAMILY_DISTRIBUTION)
+        clients.loc[:, (slice(None), "base_secured")] = rng.uniform(0.3, 0.9, (self.households, 3))
         for tp, value in PERSON_WEEKLY_DEMAND.items():
             mean, std = value["mean"], value["std"]
             low, high = 0.5 * mean, 2 * mean
@@ -35,17 +36,12 @@ class FoodPantry:
                 ("num_people", "")]
         return clients
 
-    def generate_base_secure(self) -> pd.DataFrame:
-        rates = rng.uniform(0.3, 0.8, (self.households, 3))
-        return pd.DataFrame(rates, columns=[STP, FV, PT])
-
     def initialize_weekly_demand(self):
         # price_ratio = Food.price.ratio()
         price_ratio = {STP: 1.1, FV: 1.2, PT: 0.9}
         factor = {k: (v ** ELASTICITY[k]) for k, v in price_ratio.items()}
         for tp in ELASTICITY.keys():
-            self.clients[(tp, "secured")] = self.base_secure_rate[tp] * factor[tp]
-            # this is wrong, "base_secure_rate" should be shuffled together with the client df.
+            self.clients[(tp, "secured")] = self.clients[(tp, "base_secured")] * factor[tp]
             self.clients[(tp, "demand")] = self.clients[(tp, "total")] * (
                     1 - self.clients[(tp, "secured")]) + rng.normal(0, 100, self.households)
             if "demand_alt" in self.clients[tp]:
