@@ -24,6 +24,31 @@ class FoodPantry:
         """For each client's family, generate the weekly physical demand for food, and the baseline level of proportion
         of demand they can already secure through purchasing.
         :return: a dataframe storing the information of families, including fields that will be used later.
+        >>> pantry = FoodPantry(None, households=3)
+        >>> demo = pantry.generate_clients().round(2)
+        >>> demo.iloc[:] = 0
+        >>> demo  # doctest: +NORMALIZE_WHITESPACE
+          num_people staples               ...    protein
+                       total base_secured  ... demand_alt purchased_fresh purchased_packaged
+        0          0       0            0  ...          0               0                  0
+        1          0       0            0  ...          0               0                  0
+        2          0       0            0  ...          0               0                  0
+        <BLANKLINE>
+        [3 rows x 20 columns]
+        >>> demo[FV]
+           total  base_secured  ...  purchased_fresh  purchased_packaged
+        0      0             0  ...                0                   0
+        1      0             0  ...                0                   0
+        2      0             0  ...                0                   0
+        <BLANKLINE>
+        [3 rows x 7 columns]
+        >>> pantry = FoodPantry(None)
+        >>> df = pantry.generate_clients().round(2)
+        >>> ((1 <= df[("num_people", "")]) & (df[("num_people", "")] <= 10)).all()
+        True
+        >>> ((2 <= df[("num_people", "")]) & (df[("num_people", "")] <= 9)).all()
+        False
+
         """
         columns = [("num_people", ""), (STP, "total"), (STP, "base_secured"), (STP, "secured"), (STP, "demand"),
                    (STP, "purchased"),
