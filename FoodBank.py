@@ -3,16 +3,12 @@ import pandas as pd
 from utils import Food
 
 class FoodBank:
-  def __init__(self, num_pantries: int, per_capita_wealth: float, initial_storage: Food):
-    self.pantries = [FoodPantry(self) for _ in range(num_pantries)]
-    self._storage = initial_storage
-  
-  def request_food(self, request:dict):
-    """Function used by pantries to request food
-
-    :param request: dataframe with food keys and quantities
-    """
-    pass
+  def __init__(self, food_insecure_pop: int):
+    ppl_per_pantry =  260
+    # we assume half of the food insecure people actually use the bank
+    num_pantries = int(.5 * food_insecure_pop / ppl_per_pantry)
+    self.pantries = [FoodPantry(self) for i in range(num_pantries)]
+    # set proportion of pantries from food_insecure
 
   def food_storage(self) -> pd.DataFrame:
     """Returns food storage stats as a dataframe
@@ -32,3 +28,7 @@ class FoodBank:
 
     :param donations: donations in dollars
     """
+    # predicted supply and predicted demand
+    # open to receiving food
+    # food available to donate
+    # feeding america tax
