@@ -155,9 +155,9 @@ class FoodPantry:
             elif len(options) == 2:
                 priority, alt = options
                 # Transfer out-of-limit demand for fresh food to packaged food
-                self.clients.loc[self.clients[(tp, "demand")] > limit, "demand_alt"] = self.clients.loc[self.clients[(
-                    tp, "demand")] > limit, "demand"] - limit
-                self.clients.loc[self.clients[(tp, "demand")] > limit, "demand"] = limit
+                self.clients.loc[self.clients[(tp, "demand")] > limit, (tp, "demand_alt")] = self.clients.loc[self.clients[(
+                    tp, "demand")] > limit, (tp, "demand")] - limit
+                self.clients.loc[self.clients[(tp, "demand")] > limit, (tp, "demand")] = limit
                 remains.append(self.allocate_food(priority, (tp, "demand"), (tp, "purchased_fresh")))
                 # Add the unmet demand on fresh food to packaged food
                 self.clients[(tp, "demand_alt")] += (
