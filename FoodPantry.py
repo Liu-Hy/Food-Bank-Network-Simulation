@@ -48,7 +48,6 @@ class FoodPantry:
         True
         >>> ((2 <= df[("num_people", "")]) & (df[("num_people", "")] <= 9)).all()
         False
-
         """
         columns = [("num_people", ""), (STP, "total"), (STP, "base_secured"), (STP, "secured"), (STP, "demand"),
                    (STP, "purchased"),
@@ -67,7 +66,7 @@ class FoodPantry:
         return clients
 
     def initialize_weekly_demand(self):
-        """Generate each client's proportion of food secured this week, which responds to price fluctuation, and their
+        """Generate each client's proportion of food secured this week in response to price fluctuation, and their
         demand to the food bank.
         Changes self.clients in place
         :return:

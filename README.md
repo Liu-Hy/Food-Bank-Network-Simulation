@@ -15,3 +15,5 @@
 
 - receiving foodbank
 - ordering food bank
+
+Office hour Dec 1: Mr Weible says that the receiving foodbank pays for transportation
