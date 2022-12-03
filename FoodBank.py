@@ -20,14 +20,13 @@ class FoodBank:
     self.total_utility = None
     self.total_waste = None
 
+    food_types = Global.get_food_types()
+    self.pantry_demand = dict(zip(food_types, [0] * len(food_types)))
+
     self._storage = Food(initial_storage)
 
-  def food_storage(self) -> pd.DataFrame:
-    """Returns food storage stats as a dataframe
-
-    :return: storage dataframe copy
-    """
-    return self._storage.df.copy()
+  def food_storage(self):
+    return self._storage
   
   def run_one_day(self, budget: float, food_donations):
     """Runs simulation for the day. Also calls `run_one_day` for each pantry it serves.
