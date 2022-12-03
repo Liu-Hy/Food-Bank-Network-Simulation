@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Tuple
 
 import math
 import numpy as np
@@ -92,7 +92,7 @@ class FoodPantry:
         # remove the purchase record of the previous week
         self.clients.loc[:, (slice(None), ["purchased", "purchased_fresh", "purchased_packaged"])] = 0.
 
-    def run_one_day(self):
+    def run_one_day(self) -> Tuple(float, Dict[str, float], float):
         """ Run the simulation for one day.
         Changes self.clients, self.food and self.parent.food in place.
         :return:
