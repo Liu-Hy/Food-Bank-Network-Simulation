@@ -94,8 +94,8 @@ class Food:
 
     @classmethod
     def generate_donation(cls, mean_total: float):
-        """Generate donated food to a food bank in a day. The quantity of different types and the total are all random,
-        but their mean values are derived from anual statistics.
+        """Generate donated food to a food bank in a day. The quantity of different types and the total are random, but
+        their mean values are derived from anual statistics.
         :param mean_total: the mean of the total pounds of foods donated to a food bank per day.
         :return:
         >>> food = Food.generate_donation(5000).df
@@ -105,8 +105,8 @@ class Food:
         True
         """
         types = []
-        quantity = []
         remaining_days = []
+        quantity = []
         for t in TYPES.keys():
             mean = mean_total * TYPES[t]["proportion"]
             low, high, stdev = 0.3 * mean, 5 * mean, 0.5 * mean
@@ -121,10 +121,11 @@ class Food:
         return Food(df)
 
     def sort_by_freshness(self, reverse=False, inplace=True):
-        """
-        Sort the food in each category by the remaining shelf life. Assume that clients prefer the freshest food,
+        """Sort the food in each category by the remaining shelf life.
+        :param reverse: Whether the freshest food is ranked first. We may assume that clients prefer the freshest food,
         whereas food bank gives out food that is going to expire in order to reduce waste.
-        :return:
+        :param inplace: Whether to change self.df in place
+        :return: if "inplace" is False, return a Food object with the sorted dataframe
         >>> a = Food(5000)
         >>> a.sort_by_freshness()
         >>> a.df.round(2) # doctest: +ELLIPSIS
@@ -138,6 +139,17 @@ class Food:
         743                      staples               1      8.33
         <BLANKLINE>
         [744 rows x 3 columns]
+        >>> a.sort_by_freshness(reverse=True, inplace=False).df.round(2)  # doctest: +ELLIPSIS
+                                    type  remaining_days  quantity
+        0    fresh_fruits_and_vegetables               1     35.71
+        1    fresh_fruits_and_vegetables               2     35.71
+        2    fresh_fruits_and_vegetables               3     35.71
+        ...
+        741                      staples             178      8.33
+        742                      staples             179      8.33
+        743                      staples             180      8.33
+        <BLANKLINE>
+        [744 rows x 3 columns]
         """
         sorted_df = self.df.sort_values(by=["type", "remaining_days"], ascending=[True, reverse]).reset_index(
             drop=True)
@@ -146,45 +158,65 @@ class Food:
         self.df = sorted_df
 
     def get_quantity(self) -> Dict[str, float]:
-        """ Get the quantity of each type of food in pounds
+        """Get the quantity of each type of food in pounds
         :return: a dictionary that maps food types to corresponding quantities
+        >>> emp = Food()
+        >>> emp.get_quantity()  # doctest: +NORMALIZE_WHITESPACE
+        {'staples': 0, 'fresh_fruits_and_vegetables': 0, 'packaged_fruits_and_vegetables': 0, 'fresh_protein': 0,
+        'packaged_protein': 0}
         >>> food = Food(5000)
         >>> counter = food.get_quantity()
-        >>> counter  # doctest: +NORMALIZE_WHITESPACE
-        {'fresh_fruits_and_vegetables': 500.0, 'fresh_protein': 500.0, 'packaged_fruits_and_vegetables': 1250.0,
-        'packaged_protein': 1250.0, 'staples': 1500.0}
         >>> actual = {typ: 5000 * info["proportion"] for typ, info in TYPES.items()}
         >>> counter == actual
         True
-        >>> emp = Food()
-        >>> emp.get_quantity()
-        {}
         """
-        return self.df.groupby(["type"])["quantity"].agg("sum").to_dict()
+        counter = self.df.groupby(["type"])["quantity"].agg("sum").to_dict()
+        for typ in TYPES.keys():
+            if typ not in counter:
+                counter[typ] = 0
+        return counter
 
-    def quality_control(self, num_days=1) -> Dict[str, float]:
-        """ Subtract some days from the remaining shelf life of the food, remove the expired food from stock, and record
+    def quality_control(self, num_days=1, inplace=True) -> Dict[str, float]:
+        """Subtract some days from the remaining shelf life of the food, remove the expired food from stock, and record
         the quantity of waste in each category.
         :param num_days: number of days since the last quality check
-        :return: a dictionary storing the wasted food in each category
+        :param inplace: Whether to change self.df in place. Set to False to preview food waste in the next few days
+        :return: a dictionary storing the wasted food in each category. If "inplace" is True, also returns the resulting
+        dataframe
         >>> a = Food(5000)
-        >>> sum(a.quality_control(float("inf")).values()) == 5000
-        True
-        >>> res = Food(2000).quality_control(10)
-        >>> {k: round(v, 2) for k, v in res.items()}  # doctest: +NORMALIZE_WHITESPACE
-        {'fresh_fruits_and_vegetables': 142.86, 'fresh_protein': 200.0, 'packaged_fruits_and_vegetables': 13.89,
-        'packaged_protein': 27.78, 'staples': 33.33}
-        >>> res1 = Food(2000).quality_control(5)
-        >>> res2 = Food(2000).quality_control(20)
-        >>> all([res1[key] <= value <= res2[key] for key, value in res.items()])
+        >>> expired = a.quality_control(0)
+        >>> expired  # doctest: +NORMALIZE_WHITESPACE
+        {'staples': 0, 'fresh_fruits_and_vegetables': 0, 'packaged_fruits_and_vegetables': 0, 'fresh_protein': 0,
+        'packaged_protein': 0}
+        >>> b = Food(5000)
+        >>> expired, remain = b.quality_control(float("inf"), inplace=False)
+        >>> sum(expired.values())
+        5000.0
+        >>> remain
+        Empty DataFrame
+        Columns: [type, remaining_days, quantity]
+        Index: []
+        >>> w1 = Food(2000).quality_control(5)
+        >>> w2 = Food(2000).quality_control(10)
+        >>> w3 = Food(2000).quality_control(20)
+        >>> all([w1[key] <= w2[key] <= w3[key] for key in TYPES.keys()])
         True
         """
-        self.df["remaining_days"] -= num_days
-        mask = self.df["remaining_days"] <= 0
-        waste = Food(self.df[mask])
-        waste_counter = waste.get_quantity()
-        self.df = self.df[~mask]
-        return waste_counter
+        if inplace:
+            self.df["remaining_days"] -= num_days
+            mask = self.df["remaining_days"] <= 0
+            waste = Food(self.df[mask])
+            waste_counter = waste.get_quantity()
+            self.df = self.df[~mask]
+            return waste_counter
+        else:
+            df = self.df.copy()
+            df["remaining_days"] -= num_days
+            mask = df["remaining_days"] <= 0
+            waste = Food(df[mask])
+            waste_counter = waste.get_quantity()
+            df = df[~mask]
+            return waste_counter, df
 
     def add(self, other) -> None:
         """ Add a new batch of food to stock. Merge food items with same type and remaining days.
@@ -202,16 +234,17 @@ class Food:
         self.df = self.df.set_index(["type", "remaining_days"]).add(other.set_index(["type", "remaining_days"]),
                                                                     fill_value=0).reset_index()
 
-    def subtract(self, order: Dict[str, float]):
+    def subtract(self, order: Dict[str, float], inplace=True):
         """
         Subtract some quantity of food from stock, and return the Food object with that quantity.
-        :param order:
+        :param order: a dictionary storing the ordered food in each category
+        :param inplace: Whether to change self.df in place. Set to False to preview food shortage in the next few days
         :return:
         >>> food = Food(5000)
         >>> q = food.get_quantity()
-        >>> order = {k: v-7 for k, v in q.items()}  # Take away all but 7 pounds in each type
+        >>> order = {k: v-7 for k, v in q.items()}
         >>> sent = food.subtract(order).sort_by_freshness(inplace=False)
-        >>> food.df.round(3)  # remaining food
+        >>> food.df.round(3)  # 7 pounds left in stock for each type
                                      type  remaining_days  quantity
         0     fresh_fruits_and_vegetables              14     7.000
         1                   fresh_protein              10     7.000
@@ -229,28 +262,41 @@ class Food:
         ...
         <BLANKLINE>
         [180 rows x 3 columns]
-        >>> sent.df[sent.df["type"] == PPT].round(3)  # doctest: +ELLIPSIS
-                         type  remaining_days  quantity
-        382  packaged_protein             179     6.889
-        383  packaged_protein             178     6.944
-        384  packaged_protein             177     6.944
-        ...
-        <BLANKLINE>
-        [179 rows x 3 columns]
         >>> food2 = Food(5000)
-        >>> food2.subtract({k: v+7 for k, v in q.items()})
+        >>> sent2, stock2 = food2.subtract({STP: 30.0, FPT: 22.0}, inplace=False)
+        >>> sent2.sort_by_freshness()
+        >>> sent2.df[sent2.df["type"] == STP].round(3)
+              type  remaining_days  quantity
+        4  staples               4     5.000
+        5  staples               3     8.333
+        6  staples               2     8.333
+        7  staples               1     8.333
+        >>> sent2.df[sent2.df["type"] == FFV].round(3)
+                                  type  remaining_days  quantity
+        0  fresh_fruits_and_vegetables               1       0.0
+        >>> stock2.df[stock2.df["type"] == FPT].round(3)  # doctest: +ELLIPSIS
+                     type  remaining_days  quantity
+        14  fresh_protein               1      28.0
+        15  fresh_protein               2      50.0
+        16  fresh_protein               3      50.0
+        ...
+        >>> stock2.df["quantity"].sum() == (5000 - 30 - 22)
+        True
+        >>> food3 = Food(5000)
+        >>> food3.subtract({k: v+7 for k, v in q.items()})
         Traceback (most recent call last):
-        ValueError: The "fresh_fruits_and_vegetables" you ordered does not exist or is not sufficient in stock
-        >>> food2.df["quantity"].sum() == 5000  # Subtraction failed, stock remains the same
+        ValueError: The "staples" you ordered does not exist or is not sufficient in stock
+        >>> food3.df["quantity"].sum() == 5000  # Subtraction failed, stock remains the same
         True
         """
         quantity = self.get_quantity()
         self.sort_by_freshness(reverse=True)
-        for tp, demand in order.items():
-            if demand <= 0:
-                continue
-            if (tp not in quantity) or (demand > quantity[tp]):
-                raise ValueError(f"The \"{tp}\" you ordered does not exist or is not sufficient in stock")
+
+        for typ in TYPES.keys():
+            if (typ not in order) or (order[typ] <= 0):
+                order[typ] = 0.
+            elif (typ not in quantity) or (order[typ] > quantity[typ]):
+                raise ValueError(f"The \"{typ}\" you ordered does not exist or is not sufficient in stock")
 
         order = pd.DataFrame(order.items(), columns=["type", "demand"])
         stock = self.df.copy()
@@ -271,5 +317,8 @@ class Food:
                                                              sent.loc[sent.index == sent["pivot"], "demand"]
         sent = sent[["type", "remaining_days", "quantity"]].reset_index(drop=True)
         stock = stock[["type", "remaining_days", "quantity"]].reset_index(drop=True)
-        self.df = stock
-        return Food(sent)
+        if inplace:
+            self.df = stock
+            return Food(sent)
+        else:
+            return Food(sent), Food(stock)
