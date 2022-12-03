@@ -30,16 +30,34 @@ class Global:
   """
   _current_day:int = 0
   _price_inflation_pct: float  # dictionary with TYPE (str) float pairs. Set by Simulation.
+  _base_prices = { # base prices for each food type
+    STP: 0,
+    FFV: 0,
+    PFV: 0,
+    FPT: 0,
+    PPT: 0,
+    FV: 0,
+    PT: 0,
+  }
 
   @classmethod
   def add_day(self):
     """Updates current day, only to be used by simulation.
     """
     self._current_day += 1
-  
+
   @classmethod
   def get_day(self):
     return self._current_day
+
+  @classmethod
+  def price_for(self, food_type: str):
+    """Returns price for given food type
+
+    :param food_type: 
+    :return: 
+    """
+    return self._base_prices[food_type]
 
 if __name__ == '__main__':
   print(Global.get_day())
