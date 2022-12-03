@@ -41,7 +41,11 @@ def mod_beta_random(low: float, high: float, mean: float, std: float, samples: i
 
 
 class Food:
+<<<<<<< HEAD
+    def __init__(self, inventory=None):
+=======
     def __init__(self, stock=None):
+>>>>>>> e317a5faca45b3a41b95fd94f637ae801d0be7d9
         """
         Initialize a Food object which is either empty, or based on a dataframe or total pounds of food.
         :param stock:
