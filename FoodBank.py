@@ -5,7 +5,7 @@ from typing import List
 
 
 class FoodBank:
-  def __init__(self, food_insecure_pop: int):
+  def __init__(self, food_insecure_pop: int, initial_storage: float):
 
     # we estimated this number from real data of the Eastern Food Bank
     ppl_per_pantry =  260
@@ -15,7 +15,7 @@ class FoodBank:
     self.total_utility = None
     self.total_waste = None
 
-    self._storage = Food()
+    self._storage = Food(initial_storage)
 
   def food_storage(self) -> pd.DataFrame:
     """Returns food storage stats as a dataframe
