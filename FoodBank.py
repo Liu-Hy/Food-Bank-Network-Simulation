@@ -1,17 +1,22 @@
 import FoodPantry
 import pandas as pd
 from utils import Food
-from typing import List
+from typing import List, Dict
+from constants import Global
 
 
 class FoodBank:
   def __init__(self, food_insecure_pop: int, initial_storage: float):
+    """Food bank constructor
 
+    :param food_insecure_pop: Number of food insecure people. Used to estimate number of pantries
+    :param initial_storage: Initial storage of food in pounds. Value given to Food class
+    """
     # we estimated this number from real data of the Eastern Food Bank
     ppl_per_pantry =  260
     # we assume half of the food insecure people actually use the bank
     num_pantries = int(.5 * food_insecure_pop / ppl_per_pantry)
-    self.pantries:List(FoodPantry) = [FoodPantry(self) for _ in range(num_pantries)]
+    self.pantries:List('FoodPantry') = [FoodPantry(self) for _ in range(num_pantries)]
     self.total_utility = None
     self.total_waste = None
 
