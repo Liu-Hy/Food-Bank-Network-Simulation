@@ -3,20 +3,21 @@ from typing import Dict, Tuple
 import math
 import numpy as np
 import pandas as pd
+import numba
+import time
 
-from FoodBank import FoodBank
+#from FoodBank import Foodbank
 from constants import *
 from utils import Food, mod_beta_random
 
 rng = np.random.default_rng()
 
-
 class FoodPantry:
-    def __init__(self, parent: FoodBank, num_households=100):
+    def __init__(self, parent, num_households=100):
         self.parent = parent
         self.num_households = num_households
-        self.food = Food()
         self.clients = self.generate_clients()
+        self.food = Food()
         self.operation_day = rng.integers(0, 7)
         self.previous_record = None
 
@@ -92,7 +93,7 @@ class FoodPantry:
         # remove the purchase record of the previous week
         self.clients.loc[:, (slice(None), ["purchased", "purchased_fresh", "purchased_packaged"])] = 0.
 
-    def run_one_day(self) -> Tuple(float, Dict[str, float], float):
+    def run_one_day(self) -> Tuple[float, Dict[str, float], float]:
         """ Run the simulation for one day.
         Changes self.clients, self.food and self.parent.food in place.
         :return:
@@ -106,8 +107,10 @@ class FoodPantry:
         waste = self.food.quality_control(num_days=7)
         self.food.sort_by_freshness()
         est_demand = self.estimate_demand()
-        order = FoodPantry.make_order(est_demand, self.food.get_quantity(), self.parent.food.get_quantity())
-        suppl = self.parent.food.subtract(order)  # Modifies foodbank.food in-place!
+        #order = FoodPantry.make_order(est_demand, self.food.get_quantity(), self.parent.food.get_quantity())
+        order = FoodPantry.make_order(est_demand, self.food.get_quantity(), Food(7000).get_quantity())
+        #suppl = self.parent.food.subtract(order)  # Modifies foodbank.food in-place!
+        suppl = Food(7000).subtract(order)  # Modifies foodbank.food in-place!
         self.food.add(suppl)
         # The demand and queuing order of clients change every week
         self.initialize_weekly_demand()
@@ -126,7 +129,9 @@ class FoodPantry:
             num_clients = self.clients[("num_people", "")].sum()
             est_demand = {k: (v["mean"] * num_clients) for k, v in PERSONAL_WEEKLY_DEMAND.items()}
         else:
-            NotImplemented
+            #NotImplemented
+            num_clients = self.clients[("num_people", "")].sum()
+            est_demand = {k: (v["mean"] * num_clients) for k, v in PERSONAL_WEEKLY_DEMAND.items()}
         return est_demand
 
     @classmethod
@@ -165,33 +170,61 @@ class FoodPantry:
         # To do: set limit on fresh food based on est_demand and order
         return order
 
-    def allocate_food(self, typ, dmd_col, pcs_col) -> pd.DataFrame:
+    @classmethod
+    def allocate_food(cls, food, demand) -> Tuple[pd.Series, pd.DataFrame]:
         """
         Clients line up to purchase one type of food. Record their purchase and update the pantry inventory.
         Changes self.clients and self.food in place.
         :param typ: the type of food to allocate
         :param dmd_col: the name of the column from which we read the client demand
         :param pcs_col: The name of the column where we record the purchases of clients
-        :return:
+        :return: a pd.Series storing the amount purchased by clients, and a pd.DataFrame storing the remaining food
+        >>> demand = pd.Series([10.] * 5)
+        >>> total = demand.sum() / TYPES[STP]["proportion"]
+        >>> food = Food(total + 1).select(STP).df
+        >>> purchased, remain = FoodPantry.allocate_food(food, demand)
+        >>> list(purchased.round(2))
+        [10.0, 10.0, 10.0, 10.0, 10.0]
+        >>> remain.round(2)
+                type  remaining_days  quantity
+        178  staples             179      0.02
+        179  staples             180      0.28
+        >>> food2 = Food(total - 1).select(STP).df
+        >>> purchased2, remain2 = FoodPantry.allocate_food(food2, demand)
+        >>> list(purchased2.round(2))
+        [10.0, 10.0, 10.0, 10.0, 9.7]
+        >>> remain2.empty
+        True
+        >>> food0 = Food().select(STP).df
+        >>> purchased0, remain0 = FoodPantry.allocate_food(food0, demand)
+        >>> purchased0.sum() == 0 and remain0.empty
+        True
+        >>> demand0 = pd.Series([0.] * 5)
+        >>> purchased_0, remain_0 = FoodPantry.allocate_food(food, demand0)
+        >>> purchased_0.sum() == 0
+        True
         """
-        type_df = self.food.df[self.food.df["type"] == typ].reset_index(drop=True)
-        cum_stock = type_df["quantity"].cumsum()
-        stock = cum_stock.iat[-1]
-        cum_demand = self.clients[dmd_col].cumsum()
-        demand = cum_demand.iat[-1]
-        if stock >= demand:
+        if isinstance(food, Food):
+            food = food.df
+        num_households = len(demand)
+        cum_stock = food["quantity"].cumsum()
+        tot_stock = cum_stock.iat[-1] if len(cum_stock) >= 1 else 0
+        cum_demand = demand.cumsum()
+        tot_demand = cum_demand.iat[-1] if len(cum_demand) >= 1 else 0
+        purchased = pd.Series(np.zeros(num_households))
+        if tot_stock >= tot_demand:
             # Get the index of the last batch of food before all demand is satisfied
-            pivot = cum_stock.ge(demand - 1e-7).idxmax()  # Due to float precision, loosen the condition a bit
-            type_df.loc[pivot, "quantity"] = cum_stock[pivot] - demand
-            type_df = type_df[pivot:]
-            self.clients.loc[:, pcs_col] = self.clients.loc[:, dmd_col]
+            pivot = cum_stock.ge(tot_demand - 1e-7).idxmax()  # Due to float precision, loosen the condition a bit
+            food.loc[pivot, "quantity"] = cum_stock[pivot] - tot_demand
+            food = food[pivot:]
+            purchased = demand
         else:
-            type_df = pd.DataFrame()
+            food = pd.DataFrame()
             # Get the index of the first client who cannot get enough food
-            pivot = cum_demand.gt(stock).idxmax()
-            self.clients.loc[:pivot, pcs_col] = self.clients.loc[:pivot, dmd_col]
-            self.clients.loc[pivot, pcs_col] = self.clients.loc[pivot, dmd_col] - (cum_demand[pivot] - stock)
-        return type_df
+            pivot = cum_demand.gt(tot_stock).idxmax()
+            purchased[:pivot] = demand[:pivot]
+            purchased[pivot] = demand[pivot] - (cum_demand[pivot] - tot_stock)
+        return purchased, food
 
     def hold_pantry(self):
         """Hold a pantry activity. Although in reality one client shops multiple types of food at once, to avoid
@@ -200,23 +233,28 @@ class FoodPantry:
         Changes self.clients and self.food in place
         """
         limit = 20
-
         types = {STP: [STP], FV: [FFV, PFV], PT: [FPT, PPT]}
         remains = []
         for typ, options in types.items():
             if len(options) == 1:
-                remains.append(self.allocate_food(typ, (typ, "demand"), (typ, "purchased")))
+                purchased, remain = FoodPantry.allocate_food(self.food.select(options[0]), self.clients[(typ, "demand")])
+                self.clients[(typ, "purchased")] = purchased
+                remains.append(remain)
             elif len(options) == 2:
-                priority, alt = options
+                fresh, packaged = options
                 # Transfer out-of-limit demand for fresh food to packaged food
-                self.clients.loc[self.clients[(typ, "demand")] > limit, (typ, "demand_alt")] = self.clients.loc[self.clients[(
-                    typ, "demand")] > limit, (typ, "demand")] - limit
-                self.clients.loc[self.clients[(typ, "demand")] > limit, (typ, "demand")] = limit
-                remains.append(self.allocate_food(priority, (typ, "demand"), (typ, "purchased_fresh")))
+                mask = (self.clients[(typ, "demand")] > limit)
+                self.clients.loc[mask, (typ, "demand_alt")] = self.clients.loc[mask, (typ, "demand")] - limit
+                self.clients.loc[mask, (typ, "demand")] = limit
+                purchased, remain = FoodPantry.allocate_food(self.food.select(fresh), self.clients[(typ, "demand")])
+                self.clients[(typ, "purchased_fresh")] = purchased
+                remains.append(remain)
                 # Add the unmet demand on fresh food to packaged food
                 self.clients[(typ, "demand_alt")] += (
                         self.clients[(typ, "demand")] - self.clients[(typ, "purchased_fresh")])
-                remains.append(self.allocate_food(alt, (typ, "demand_alt"), (typ, "purchased_packaged")))
+                purchased, remain = FoodPantry.allocate_food(self.food.select(packaged), self.clients[(typ, "demand_alt")])
+                self.clients[(typ, "purchased_packaged")] = purchased
+                remains.append(remain)
         self.food.df = pd.concat(remains).reset_index(drop=True)
 
     def func(self, data: pd.Series, typ="exp", param=0.7) -> pd.Series:
@@ -254,7 +292,6 @@ class FoodPantry:
         :return:
         """
         assert typ in [STP, FV, PT]
-        get_utility = []
         family_size = self.clients[("num_people", "")]
         total = self.clients[(typ, "total")]
         secured = self.clients[(typ, "secured")]
@@ -279,3 +316,13 @@ class FoodPantry:
             tot_util += self.utility_per_type(typ)
         return tot_util.sum() / num_clients
 
+
+if __name__ == '__main__':
+    # we may need to drastically reduce the number of pantries to make it computationally feasible
+    # about 10 million households in total
+    pantry = FoodPantry(None, num_households=10000)
+    start = time.time()
+    for i in range(1000):
+        pantry.run_one_day()
+    end = time.time()
+    print(end - start)

@@ -39,7 +39,6 @@ def mod_beta_random(low: float, high: float, mean: float, std: float, samples: i
     beta = low + beta * (high - low)
     return beta
 
-
 class Food:
     def __init__(self, stock=None):
         """
