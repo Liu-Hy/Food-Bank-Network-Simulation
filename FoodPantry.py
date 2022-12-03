@@ -25,7 +25,7 @@ class FoodPantry:
         of demand they can already secure through purchasing.
         :return: a dataframe storing the information of families, including fields that will be used later.
         >>> pantry = FoodPantry(None, households=3)
-        >>> demo = pantry.generate_clients().round(2)
+        >>> demo = pantry.generate_clients()
         >>> demo.iloc[:] = 0
         >>> demo  # doctest: +NORMALIZE_WHITESPACE
           num_people staples               ...    protein
@@ -46,8 +46,12 @@ class FoodPantry:
         >>> df = pantry.generate_clients().round(2)
         >>> ((1 <= df[("num_people", "")]) & (df[("num_people", "")] <= 10)).all()
         True
-        >>> ((2 <= df[("num_people", "")]) & (df[("num_people", "")] <= 9)).all()
-        False
+        >>> bools = []
+        >>> for typ, stat in PERSON_WEEKLY_DEMAND.items():
+        ...     exp = stat["mean"] * pantry.households * 2.4503
+        ...     bools.append(0.85 * exp < df[(typ, "total")].sum() < 1.15 * exp)
+        >>> all(bools)
+        True
         """
         columns = [("num_people", ""), (STP, "total"), (STP, "base_secured"), (STP, "secured"), (STP, "demand"),
                    (STP, "purchased"),
@@ -70,6 +74,8 @@ class FoodPantry:
         demand to the food bank.
         Changes self.clients in place
         :return:
+        >>> pantry = FoodPantry(None)
+        >>> pantry.initialize_weekly_demand()
         """
         # price_ratio = Global.price.ratio
         price_ratio = {STP: 1.1, FV: 1.2, PT: 0.9}
@@ -87,6 +93,9 @@ class FoodPantry:
         """ Run the simulation for one day.
         Changes self.clients, self.food and self.parent.food in place.
         :return:
+        >>> pantry = FoodPantry(None)
+        >>> waste, order, utility = pantry.run_one_day()
+        >>> waste
         """
         if (Global.get_day() % 7) != self.operation_day:
             return
@@ -112,7 +121,7 @@ class FoodPantry:
         """
         if self.previous_record is None:
             num_clients = self.clients[("num_people", "")].sum()
-            est_demand = {k: (v * num_clients) for k, v in PERSON_WEEKLY_DEMAND.items()}
+            est_demand = {k: (v["mean"] * num_clients) for k, v in PERSON_WEEKLY_DEMAND.items()}
         else:
             NotImplemented
         return est_demand
@@ -208,7 +217,7 @@ class FoodPantry:
         [0.0, 0.28, 0.52, 0.72, 0.88, 1.0]
         >>> pantry.func(portion, "log", 3).round(2).values.tolist()
         [0.0, 0.34, 0.57, 0.74, 0.88, 1.0]
-            """
+        """
         assert typ in ["exp", "log", "quad"]
         if typ == "exp":
             return np.power(data, param)

@@ -41,11 +41,7 @@ def mod_beta_random(low: float, high: float, mean: float, std: float, samples: i
 
 
 class Food:
-<<<<<<< HEAD
-    def __init__(self, inventory=None):
-=======
     def __init__(self, stock=None):
->>>>>>> e317a5faca45b3a41b95fd94f637ae801d0be7d9
         """
         Initialize a Food object which is either empty, or based on a dataframe or total pounds of food.
         :param stock:
@@ -98,11 +94,15 @@ class Food:
 
     @classmethod
     def generate_donation(cls, mean_total: float):
-        """Generate donated food to a food bank in a day. The quantity of different types and the total are all random, but
-        their mean values are derived from anual statistics.
+        """Generate donated food to a food bank in a day. The quantity of different types and the total are all random,
+        but their mean values are derived from anual statistics.
         :param mean_total: the mean of the total pounds of foods donated to a food bank per day.
         :return:
         >>> food = Food.generate_donation(5000).df
+        >>> len(food) == sum(info["max_days"] for info in TYPES.values())
+        True
+        >>> food["type"].unique().tolist() == list(TYPES.keys())
+        True
         """
         types = []
         quantity = []
@@ -146,10 +146,19 @@ class Food:
         self.df = sorted_df
 
     def get_quantity(self) -> Dict[str, float]:
-        """
-
-        :param data:
-        :return:
+        """ Get the quantity of each type of food in pounds
+        :return: a dictionary that maps food types to corresponding quantities
+        >>> food = Food(5000)
+        >>> counter = food.get_quantity()
+        >>> counter  # doctest: +NORMALIZE_WHITESPACE
+        {'fresh_fruits_and_vegetables': 500.0, 'fresh_protein': 500.0, 'packaged_fruits_and_vegetables': 1250.0,
+        'packaged_protein': 1250.0, 'staples': 1500.0}
+        >>> actual = {typ: 5000 * info["proportion"] for typ, info in TYPES.items()}
+        >>> counter == actual
+        True
+        >>> emp = Food()
+        >>> emp.get_quantity()
+        {}
         """
         return self.df.groupby(["type"])["quantity"].agg("sum").to_dict()
 
@@ -182,6 +191,11 @@ class Food:
         Fully tested on jupyter notebook. Still thinking of how to present tests concisely in doctrings
         :param other:
         :return:
+        >>> a = Food(2000)
+        >>> b = Food(3000)
+        >>> a.add(b)
+        >>> a.df["quantity"].sum()
+        5000.0
         """
         if isinstance(other, Food):
             other = other.df
