@@ -93,7 +93,7 @@ class FoodPantry:
         # remove the purchase record of the previous week
         self.clients.loc[:, (slice(None), ["purchased", "purchased_fresh", "purchased_packaged"])] = 0.
 
-    def run_one_day(self) -> Tuple(float, Dict[str, float], float):
+    def run_one_day(self) -> Tuple[float, Dict[str, float], float]:
         """ Run the simulation for one day.
         Changes self.clients, self.food and self.parent.food in place.
         :return:
@@ -320,7 +320,7 @@ class FoodPantry:
 if __name__ == '__main__':
     pantry = FoodPantry(None)
     start = time.time()
-    for i in range(1000):
+    for i in range(100):
         pantry.run_one_day()
     end = time.time()
     print(end - start)
