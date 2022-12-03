@@ -283,7 +283,7 @@ class Food:
         >>> stock2.df["quantity"].sum() == (5000 - 30 - 22)
         True
         >>> food3 = Food(5000)
-        >>> food3.subtract({k: v+7 for k, v in q.items()})
+        >>> food3.subtract({STP: float("inf")})
         Traceback (most recent call last):
         ValueError: The "staples" you ordered does not exist or is not sufficient in stock
         >>> food3.df["quantity"].sum() == 5000  # Subtraction failed, stock remains the same
