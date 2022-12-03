@@ -176,6 +176,44 @@ class Food:
                 counter[typ] = 0
         return counter
 
+    def select(self, typ):
+        """ Select one or more types of food from a Food object
+        :param typ: the specified type(s)
+        :return: a new Food object with the specified type(s) of food
+        >>> food = Food(5000)
+        >>> food.select(STP).df.round(3)  # doctest: +ELLIPSIS
+                type  remaining_days  quantity
+        0    staples               1     8.333
+        1    staples               2     8.333
+        ...
+        179  staples             180     8.333
+        <BLANKLINE>
+        [180 rows x 3 columns]
+        >>> food.select([FFV, PPT]).df.round(2)  # doctest: +ELLIPSIS
+                                    type  remaining_days  quantity
+        0    fresh_fruits_and_vegetables               1     35.71
+        1    fresh_fruits_and_vegetables               2     35.71
+        ...
+        192             packaged_protein             179      6.94
+        193             packaged_protein             180      6.94
+        <BLANKLINE>
+        [194 rows x 3 columns]
+        >>> food.select("strange").df
+        Traceback (most recent call last):
+        AssertionError
+        >>> food.select([FFV, "strange"]).df
+        Traceback (most recent call last):
+        AssertionError
+        """
+        if isinstance(typ, str):
+            assert typ in TYPES
+            return Food(self.df[self.df["type"] == typ].reset_index(drop=True))
+        elif isinstance(typ, list):
+            assert set(typ).issubset(set(TYPES.keys()))
+            return Food(self.df[self.df["type"].isin(typ)].reset_index(drop=True))
+        else:
+            raise TypeError
+
     def quality_control(self, num_days=1, inplace=True) -> Dict[str, float]:
         """Subtract some days from the remaining shelf life of the food, remove the expired food from stock, and record
         the quantity of waste in each category.
