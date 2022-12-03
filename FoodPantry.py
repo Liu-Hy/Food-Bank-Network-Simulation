@@ -318,9 +318,11 @@ class FoodPantry:
 
 
 if __name__ == '__main__':
-    pantry = FoodPantry(None)
+    # we may need to drastically reduce the number of pantries to make it computationally feasible
+    # about 10 million households in total
+    pantry = FoodPantry(None, num_households=10000)
     start = time.time()
-    for i in range(100):
+    for i in range(1000):
         pantry.run_one_day()
     end = time.time()
     print(end - start)
