@@ -69,4 +69,4 @@ if __name__ == '__main__':
   print(Global.add_day())
   print(Global.get_day())
 
-  Global.food_types.fruits
+  print(Global.get_food_types())
