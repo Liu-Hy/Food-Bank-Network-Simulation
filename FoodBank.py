@@ -42,14 +42,6 @@ class FoodBank:
       self.total_waste = FoodBank.increment_var(self.total_waste, waste)
       self.fulfill_order(order, pantry)
 
-  def fulfill_order(self, order: Dict(str, float), pantry):
-    """Fulfills pantry order
-
-    :param order: order dictionary in weight units
-    :param pantry: pantry that made the order
-    """
-    pass
-
   def get_pantry_demant_proportion(self):
     """Returns demand in proportions. Used to decide what food to buy next.
 
