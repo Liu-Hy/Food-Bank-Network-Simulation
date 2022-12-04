@@ -59,9 +59,14 @@ class Global:
     """
     return self._base_prices[food_type]
 
+  @classmethod
+  def get_food_types(self):
+    return self._base_prices.keys()
+
+
 if __name__ == '__main__':
   print(Global.get_day())
   print(Global.add_day())
   print(Global.get_day())
 
-  Global.food_types.fruits
+  print(Global.get_food_types())
