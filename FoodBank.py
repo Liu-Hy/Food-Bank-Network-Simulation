@@ -13,7 +13,7 @@ class FoodBank:
     :param initial_storage: Initial storage of food in pounds. Value given to Food class
     """
     # we estimated this number from real data of the Eastern Food Bank
-    ppl_per_pantry =  260
+    ppl_per_pantry = 245
     # we assume half of the food insecure people actually use the bank
     num_pantries = int(.5 * food_insecure_pop / ppl_per_pantry)
     self.pantries:List('FoodPantry') = [FoodPantry(self) for _ in range(num_pantries)]
@@ -34,6 +34,8 @@ class FoodBank:
     :param budget: Budget for the day
     :param food_donations: Budget for the day
     """
+    new_food = Food.generate_donation(food_donations)
+    self._storage.add(new_food)
     for pantry in self.pantries:
       waste, order, utility = pantry.run_one_day()
       self.total_utility = FoodBank.increment_var(self.total_utility, utility)
