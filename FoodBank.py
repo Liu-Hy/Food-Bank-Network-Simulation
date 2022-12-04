@@ -26,7 +26,11 @@ class FoodBank:
     self._storage = Food(initial_storage)
 
   def food_storage(self):
-    return self._storage
+    """API for retreaving food storage dataframe
+
+    :return: storage dataframe
+    """
+    return self._storage.df.copy()
   
   def run_one_day(self, budget: float, food_donations: float):
     """Runs simulation for the day. Also calls `run_one_day` for each pantry it serves.
