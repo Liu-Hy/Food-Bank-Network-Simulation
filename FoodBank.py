@@ -28,11 +28,11 @@ class FoodBank:
   def food_storage(self):
     return self._storage
   
-  def run_one_day(self, budget: float, food_donations):
+  def run_one_day(self, budget: float, food_donations: float):
     """Runs simulation for the day. Also calls `run_one_day` for each pantry it serves.
 
     :param budget: Budget for the day
-    :param food_donations: Budget for the day
+    :param food_donations: Food donations in pounds of food
     """
     new_food = Food.generate_donation(food_donations)
     self._storage.add(new_food)
