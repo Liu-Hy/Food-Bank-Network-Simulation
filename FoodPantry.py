@@ -103,6 +103,7 @@ class FoodPantry:
             est_demand = self.mean_demand
         else:
             est_demand = self.previous_record[-1]
+        est_demand = {k: 1 * v for k, v in est_demand.items()}  # scale the estimation?
         return est_demand
 
     def make_order(self, demand: Dict[str, float], stock: Dict[str, float], bank_stock: Dict[str, float]) -> \
@@ -286,7 +287,7 @@ class FoodPantry:
         for typ, options in types.items():
             if len(options) == 1:
                 purchased, remain, served = self.allocate_food(self.food.select(options[0]),
-                                                             self.clients[(typ, "demand")])
+                                                               self.clients[(typ, "demand")])
                 self.clients[(typ, "purchased")] = purchased
                 remains.append(remain)
                 served_per_type.append(served)
@@ -306,7 +307,8 @@ class FoodPantry:
                 mask = (self.clients[(typ, "demand")] > limit)
                 self.clients.loc[mask, (typ, "demand_alt")] = self.clients.loc[mask, (typ, "demand")] - limit
                 self.clients.loc[mask, (typ, "demand")] = limit
-                purchased_fresh, remain, served = self.allocate_food(self.food.select(fresh), self.clients[(typ, "demand")])
+                purchased_fresh, remain, served = self.allocate_food(self.food.select(fresh),
+                                                                     self.clients[(typ, "demand")])
                 self.clients[(typ, "purchased_fresh")] = purchased_fresh
                 remains.append(remain)
                 served_per_type.append(served)
@@ -314,7 +316,7 @@ class FoodPantry:
                 self.clients[(typ, "demand_alt")] += (
                         self.clients[(typ, "demand")] - self.clients[(typ, "purchased_fresh")])
                 purchased_pckg, remain, served = self.allocate_food(self.food.select(packaged),
-                                                             self.clients[(typ, "demand_alt")])
+                                                                    self.clients[(typ, "demand_alt")])
                 self.clients[(typ, "purchased_packaged")] = purchased_pckg
                 remains.append(remain)
                 served_per_type.append(served)
@@ -325,13 +327,16 @@ class FoodPantry:
                 elif served == self.num_households:
                     est_demand[typ] = (purchased_fresh + purchased_pckg).sum().item()
                 elif served < self.num_households:
-                    est_demand[typ] = (purchased_fresh + purchased_pckg)[:served].sum().item() / served * self.num_households
+                    est_demand[typ] = (purchased_fresh + purchased_pckg)[
+                                      :served].sum().item() / served * self.num_households
                 else:
                     raise ValueError
         self.food.df = pd.concat(remains).reset_index(drop=True)
         self.previous_record.append(est_demand)
-        all_served = min(served_per_type)  # number of clients who get all their demand satisfied
-        partly_served = min(max(served_per_type) + 1, self.num_households)  # number of clients who get at least some food
+        # number of clients who get all their demand satisfied (either fresh or packaged)
+        all_served = min(served_per_type[0], served_per_type[2], served_per_type[4])
+        # number of clients who get at least some food
+        partly_served = min(max(served_per_type) + 1, self.num_households)
         return all_served, partly_served
 
     def run_one_day(self) -> Tuple[Dict[str, float], Dict[str, float], float]:
@@ -348,9 +353,9 @@ class FoodPantry:
         self.food.sort_by_freshness()
         est_demand = self.estimate_demand()
         # order, limits = self.make_order(est_demand, self.food.get_quantity(), self.parent.food.get_quantity())
-        order, limits = self.make_order(est_demand, self.food.get_quantity(), Food(200000).get_quantity())
+        order, limits = self.make_order(est_demand, self.food.get_quantity(), Food(20000).get_quantity())
         # suppl = self.parent.food.subtract(order)  # Modifies foodbank.food in-place!
-        suppl = Food(200000).subtract(order)
+        suppl = Food(20000).subtract(order)
         self.food.add(suppl)
         # The demand and queuing order of clients change every week
         self.initialize_weekly_demand()
