@@ -147,6 +147,8 @@ class FoodPantry:
             fresh_qty = stock[fresh] + order[fresh]
             if fresh_qty < demand[typ]:
                 limits[typ] = fresh_qty * 1.2 / self.num_households
+            else:
+                limits[typ] = float("inf")
         return order, limits
 
     def func(self, data: pd.Series, typ="exp", param=0.7) -> pd.Series:
@@ -292,7 +294,7 @@ class FoodPantry:
                 remains.append(remain)
         self.food.df = pd.concat(remains).reset_index(drop=True)
 
-    def run_one_day(self) -> Tuple[float, Dict[str, float], float]:
+    def run_one_day(self) -> Tuple[Dict[str, float], Dict[str, float], float]:
         """ Run the simulation for one day.
         Changes self.clients, self.food and self.parent.food in place.
         :return:
