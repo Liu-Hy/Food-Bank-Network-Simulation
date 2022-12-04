@@ -32,11 +32,12 @@ class FoodBank:
     """
     return self._storage.df.copy()
   
-  def run_one_day(self, budget: float, food_donations: float):
+  def run_one_day(self, budget: float, food_donations: float) -> Tuple[Dict[str, float], Dict[str, float], float]:
     """Runs simulation for the day. Also calls `run_one_day` for each pantry it serves.
 
     :param budget: Budget for the day
     :param food_donations: Food donations in pounds of food
+    :return: Overall waste, demand (based on orders) and utility of all pantries
     """
     new_food = Food.generate_donation(food_donations)
     self._storage.add(new_food)
