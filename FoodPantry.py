@@ -99,7 +99,6 @@ class FoodPantry:
         :return:
         >>> pantry = FoodPantry(None)
         >>> waste, order, utility = pantry.run_one_day()
-        >>> waste
         """
         #if (Global.get_day() % 7) != self.operation_day:
             #return
@@ -119,6 +118,7 @@ class FoodPantry:
         self.hold_pantry()
 
         utility = self.get_utility()
+        #print(utility)
         return waste, order, utility
 
     def estimate_demand(self) -> Dict[str, float]:
@@ -172,12 +172,9 @@ class FoodPantry:
 
     @classmethod
     def allocate_food(cls, food, demand) -> Tuple[pd.Series, pd.DataFrame]:
-        """
-        Clients line up to purchase one type of food. Record their purchase and update the pantry inventory.
-        Changes self.clients and self.food in place.
-        :param typ: the type of food to allocate
-        :param dmd_col: the name of the column from which we read the client demand
-        :param pcs_col: The name of the column where we record the purchases of clients
+        """Clients line up to purchase one type of food. Record their purchase and update the pantry inventory.
+        :param food: the dataframe of some type of food
+        :param demand: a pd.Series object storing the demand of clients in the queue
         :return: a pd.Series storing the amount purchased by clients, and a pd.DataFrame storing the remaining food
         >>> demand = pd.Series([10.] * 5)
         >>> total = demand.sum() / TYPES[STP]["proportion"]
@@ -320,7 +317,7 @@ class FoodPantry:
 if __name__ == '__main__':
     # we may need to drastically reduce the number of pantries to make it computationally feasible
     # about 10 million households in total
-    pantry = FoodPantry(None, num_households=10000)
+    pantry = FoodPantry(None, num_households=100)
     start = time.time()
     for i in range(1000):
         pantry.run_one_day()
