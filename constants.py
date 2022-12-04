@@ -36,8 +36,6 @@ class Global:
     PFV: 0,
     FPT: 0,
     PPT: 0,
-    FV: 0,
-    PT: 0,
   }
 
   @classmethod
