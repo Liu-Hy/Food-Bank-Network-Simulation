@@ -1,8 +1,8 @@
 import FoodPantry
 import pandas as pd
 from utils import Food
-from typing import List, Dict
-from constants import Global
+from typing import List, Dict, Tuple
+from constants import Global, TYPES
 
 
 class FoodBank:
