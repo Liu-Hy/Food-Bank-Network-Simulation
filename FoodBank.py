@@ -1,8 +1,8 @@
 import FoodPantry
 import pandas as pd
 from utils import Food
-from typing import List, Dict
-from constants import Global
+from typing import List, Dict, Tuple
+from constants import Global, TYPES
 
 
 class FoodBank:
@@ -26,23 +26,52 @@ class FoodBank:
     self._storage = Food(initial_storage)
 
   def food_storage(self):
-    return self._storage
+    """API for retreaving food storage dataframe
+
+    :return: storage dataframe
+    """
+    return self._storage.df.copy()
   
-  def run_one_day(self, budget: float, food_donations):
+  def run_one_day(self, budget: float, food_donations: float) -> Tuple[Dict[str, float], Dict[str, float], float]:
     """Runs simulation for the day. Also calls `run_one_day` for each pantry it serves.
 
     :param budget: Budget for the day
-    :param food_donations: Budget for the day
+    :param food_donations: Food donations in pounds of food
+    :return: Overall waste, demand (based on orders) and utility of all pantries
     """
+
     new_food = Food.generate_donation(food_donations)
     self._storage.add(new_food)
+
     for pantry in self.pantries:
       waste, order, utility = pantry.run_one_day()
-      self.total_utility = FoodBank.increment_var(self.total_utility, utility)
-      self.total_waste = FoodBank.increment_var(self.total_waste, waste)
-      self.fulfill_order(order, pantry)
+      self.total_utility = FoodBank.increment_utility(self.total_utility, utility)
+      self.total_waste = FoodBank.increment_waste(self.total_waste, waste)
+      self.update_demand(order)
 
-  def get_pantry_demant_proportion(self):
+    self.purchase_food(budget)
+
+    return self.total_waste, self.pantry_demand, self.total_utility
+
+  @classmethod
+  def increment_waste(total_waste, new_waste):
+    return { food: (total_waste[food] + waste) for food, waste in new_waste}
+
+  def purchase_food(self, budget: float):
+    """Purchases food using given budget
+
+    :param budget: budget in dollars
+    """
+    demand = self.get_pantry_demand_proportion()
+    types = demand.keys()
+    remaining_days = [TYPES[t]['max_days'] for t in types]
+    quantity = [demand[t] * budget * Global._base_prices[t] for t in types]
+
+    purchase = pd.DataFrame({"type": types, "remaining_days": remaining_days, "quantity": quantity})
+    self._storage.add(purchase)
+
+
+  def get_pantry_demand_proportion(self):
     """Returns demand in proportions. Used to decide what food to buy next.
 
     :return: demand proportions
@@ -59,18 +88,16 @@ class FoodBank:
       self.pantry_demand[food] += amount
 
   @classmethod
-  def increment_var(self, var: float, increment: float):
-    if var is None:
-      return increment
-    else:
-      return var + increment
-  
-  def buy_food(self, donations: float):
-    """Buys food based on donations and demand from pantries.
+  def increment_utility(self, total_utility: float, utility: float):
+    """Increments total utility
 
-    :param donations: donations in dollars
+    :param total_utility: 
+    :param utility: 
+    :return: new total utility
+    >>> FoodBank(0, 0).increment_utility(10)
+    10
     """
-    # predicted supply and predicted demand
-    # open to receiving food
-    # food available to donate
-    # feeding america tax
+    if total_utility is None:
+      return utility
+    else:
+      return total_utility + utility
