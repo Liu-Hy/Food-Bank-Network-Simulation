@@ -314,6 +314,7 @@ class FoodPantry:
                 self.clients.loc[mask, (typ, "demand")] = limit
                 purchased_fresh, remain, served = self.allocate_food(self.food.select(fresh),
                                                                      self.clients[(typ, "demand")])
+                #print(served)
                 self.clients[(typ, "purchased_fresh")] = purchased_fresh
                 remains.append(remain)
                 served_per_type.append(served)
@@ -357,9 +358,9 @@ class FoodPantry:
         waste = self.food.quality_control(num_days=1)
         est_demand = self.estimate_demand()
         # order, limits = self.make_order(est_demand, self.food.get_quantity(), self.parent.food.get_quantity())
-        order, limits = self.make_order(est_demand, self.food.get_quantity(), Food(3000).get_quantity())
+        order, limits = self.make_order(est_demand, self.food.get_quantity(), Food(2000).get_quantity())
         # suppl = self.parent.food.subtract(order)  # Modifies foodbank.food in-place!
-        suppl = Food(3000).subtract(order)
+        suppl = Food(2000).subtract(order)
         self.food.add(suppl)
         self.food.sort_by_freshness()
         self.clients = self.clients.sample(frac=1).reset_index(drop=True)
