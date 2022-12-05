@@ -5,7 +5,7 @@ from typing import Dict, Tuple
 import numpy as np
 import pandas as pd
 
-# from FoodBank import Foodbank
+# from FoodBank import FoodBank
 from constants import *
 from utils import Food, mod_beta_random
 
@@ -18,6 +18,7 @@ class FoodPantry:
         self.num_households = num_households
         self.clients = self.generate_clients()
         self.num_people = self.clients[("num_people", "")].sum()
+        # Inferred from interview and statistics, clients on average need 40% of their demand from foodbanks
         self.mean_demand = {k: (v["mean"] * self.num_people * 0.4) for k, v in PERSONAL_WEEKLY_DEMAND.items()}
         self.food = Food()
         self.operation_day = rng.integers(0, 7)
@@ -358,9 +359,9 @@ class FoodPantry:
         waste = self.food.quality_control(num_days=1)
         est_demand = self.estimate_demand()
         # order, limits = self.make_order(est_demand, self.food.get_quantity(), self.parent.food.get_quantity())
-        order, limits = self.make_order(est_demand, self.food.get_quantity(), Food(2000).get_quantity())
+        order, limits = self.make_order(est_demand, self.food.get_quantity(), Food(1500).get_quantity())
         # suppl = self.parent.food.subtract(order)  # Modifies foodbank.food in-place!
-        suppl = Food(2000).subtract(order)
+        suppl = Food(1500).subtract(order)
         self.food.add(suppl)
         self.food.sort_by_freshness()
         self.clients = self.clients.sample(frac=1).reset_index(drop=True)
