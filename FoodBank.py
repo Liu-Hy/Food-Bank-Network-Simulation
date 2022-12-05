@@ -39,7 +39,6 @@ class FoodBank:
     :param food_donations: Food donations in pounds of food
     :return: Overall waste, demand (based on orders) and utility of all pantries
     """
-
     new_food = Food.generate_donation(food_donations)
     self._storage.add(new_food)
 
