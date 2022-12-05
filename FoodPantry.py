@@ -353,15 +353,15 @@ class FoodPantry:
         >>> pantry = FoodPantry(None)
         >>> waste, order, utility, num_served = pantry.run_one_day()
         """
-        # if (Global.get_day() % 7) != self.operation_day:
-        # return
+        if (Global.get_day() % 7) != self.operation_day:
+            return
         self.initialize_weekly_demand()
         waste = self.food.quality_control(num_days=1)
         est_demand = self.estimate_demand()
-        # order, limits = self.make_order(est_demand, self.food.get_quantity(), self.parent.food.get_quantity())
-        order, limits = self.make_order(est_demand, self.food.get_quantity(), Food(1500).get_quantity())
-        # suppl = self.parent.food.subtract(order)  # Modifies foodbank.food in-place!
-        suppl = Food(1500).subtract(order)
+        order, limits = self.make_order(est_demand, self.food.get_quantity(), self.parent._storage.get_quantity())
+        #order, limits = self.make_order(est_demand, self.food.get_quantity(), Food(1500).get_quantity())
+        suppl = self.parent._storage.subtract(order)  # Modifies foodbank.food in-place!
+        #suppl = Food(1500).subtract(order)
         self.food.add(suppl)
         self.food.sort_by_freshness()
         self.clients = self.clients.sample(frac=1).reset_index(drop=True)
