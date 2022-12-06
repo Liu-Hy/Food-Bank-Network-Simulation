@@ -43,7 +43,10 @@ class FoodBank:
     self._storage.add(new_food)
 
     for pantry in self.pantries:
-      waste, order, utility = pantry.run_one_day()
+      pantry_output = pantry.run_one_day()
+      if pantry_output is None:
+        continue
+      waste, order, utility = pantry_output
       self.total_utility = FoodBank.increment_utility(self.total_utility, utility)
       self.total_waste = FoodBank.increment_waste(self.total_waste, waste)
       self.update_demand(order)
