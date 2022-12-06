@@ -1,4 +1,4 @@
-import FoodPantry
+from FoodPantry import FoodPantry
 import pandas as pd
 from utils import Food
 from typing import List, Dict, Tuple
@@ -16,7 +16,7 @@ class FoodBank:
     ppl_per_pantry = 245
     # we assume half of the food insecure people actually use the bank
     num_pantries = int(.5 * food_insecure_pop / ppl_per_pantry)
-    self.pantries:List['FoodPantry'] = [FoodPantry(self) for _ in range(num_pantries)]
+    self.pantries:List[FoodPantry] = [FoodPantry(self) for _ in range(num_pantries)]
     self.total_utility = None
     self.total_waste = None
 
