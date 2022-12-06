@@ -4,6 +4,7 @@ from FoodPantry import FoodPantry
 from Global import Global, TYPES
 from utils import Food
 import time
+import random
 
 
 class FoodBank:
@@ -30,6 +31,9 @@ class FoodBank:
         :return: storage dataframe
         """
         return self._storage.df.copy()
+
+    def randomize_pantry_order(self):
+        random.shuffle(self.pantries)
 
     def run_one_day(self, budget: float, food_donations: float) -> Tuple[Dict[str, float], Dict[str, float], float]:
         """Runs simulation for the day. Also calls `run_one_day` for each pantry it serves.
@@ -115,7 +119,7 @@ if __name__ == '__main__':
     utilities = []
     wastes = []
     served_ls = []
-    num_days = 21
+    num_days = 7
     foodbank = FoodBank(initial_storage=500000)
     start = time.time()
     for i in range(num_days):
@@ -124,6 +128,7 @@ if __name__ == '__main__':
         wastes.append(waste)
         new_food = Food.generate_donation(33333)
         foodbank._storage.add(new_food)
+        foodbank.randomize_pantry_order()
         for pantry in foodbank.pantries:
             result = pantry.run_one_day()
             if result is not None:
