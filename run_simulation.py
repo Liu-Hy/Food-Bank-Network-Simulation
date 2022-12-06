@@ -158,8 +158,10 @@ if __name__ == "__main__":
     global_state=Global()
     global_state._price_inflation_pct=inflation_rate
 
+    #initialize food banks
     food_banks=initialize_food_banks(food_banks_df)
-    print(food_banks)
+
+    #generate randomized distributions
     daily_budget=generate_funds_distribution(food_banks_df, num_days)
     daily_donations=generate_food_distribution(food_banks_df, num_days)
     good_prices=generate_good_prices(prices_df, num_days)
