@@ -49,24 +49,47 @@ def generate_distance_matrix(food_bank_df: pd.DataFrame)->np.ndarray:
     return distance
 
 
-
-
 def generate_funds_distribution(food_bank_df: pd.DataFrame, num_days:int)-> np.ndarray:
     """
-
+    generates randomized distribution for daily food purchase budget
+    daily budget distributed randomly but approach annual budget
     :param num_days: number of days to run simulation
     :param food_bank_df: dataframe with food bank data per row
-    :return: numpy array, beta distribution of food purchase funds per day (foodbank x day)
-    """
+    :return: numpy array, beta distribution of food purchase funds per day (foodbank x days)
 
-    mod_beta_random()
+    >>> input_csv=pd.read_csv("input.csv").head(5)
+    >>> test=generate_funds_distribution(input_csv, 365)[0]
+    """
+    budgets=food_bank_df["estimated_budget"]
+    ret=np.zeros(shape=(len(budgets), num_days))
+    for i in range(0, len(budgets)):
+        annual=budgets[i]
+        total=annual*FOOD_PURCHASE_BUDGET_RATIO #annual budget for food purchases
+        daily_avg=total/365
+        min_val=daily_avg*0.5 #min is half daily avg
+        max_val=daily_avg*2 #max is twice daily avg
+        std_dev=daily_avg*0.2 #estimate standard deviation as 20%
+        ret[i]=mod_beta_random(low=min_val, high=max_val, mean=daily_avg,std=std_dev, samples=num_days)
+    return ret
+
 
 def generate_food_distribution(food_bank_df: pd.DataFrame , num_days:int) -> np.ndarray:
     """
     :param num_days: number of days to run simulation
     :param food_bank_df: dataframe with food bank data per row
-    :return: beta distribution of funds per day based on annual budget for food bank
+    :return: beta distribution of food donations per day (foodbank x day)
     """
+    amounts = food_bank_df["estimated_pounds_per_year"]
+    ret = np.zeros(shape=(len(amounts), num_days))
+    for i in range(0, len(amounts)):
+        annual = amounts[i]
+        total = annual * (1-FOOD_PURCHASE_BUDGET_RATIO)  # 90% of food is donated
+        daily_avg = total / 365
+        min_val = daily_avg * 0.5  # min is half daily avg
+        max_val = daily_avg * 2  # max is twice daily avg
+        std_dev = daily_avg * 0.2  # estimate standard deviation as 20%
+        ret[i] = mod_beta_random(low=min_val, high=max_val, mean=daily_avg, std=std_dev, samples=num_days)
+    return ret
 def generate_price_distribution(price_summary: pd.DataFrame , num_days:int) -> dict[np.ndarray]:
     """
     :param num_days: number of days to run simulation
