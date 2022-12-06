@@ -119,6 +119,7 @@ if __name__ == '__main__':
     foodbank = FoodBank(initial_storage=500000)
     start = time.time()
     for i in range(num_days):
+        Global.add_day()
         waste = foodbank._storage.quality_control(1)
         wastes.append(waste)
         new_food = Food.generate_donation(33333)

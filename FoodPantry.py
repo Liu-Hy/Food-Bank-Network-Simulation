@@ -356,7 +356,7 @@ class FoodPantry:
         if (Global.get_day() % 7) != self.operation_day:
             return
         self.initialize_weekly_demand()
-        waste = self.food.quality_control(num_days=1)
+        waste = self.food.quality_control(num_days=7)
         est_demand = self.estimate_demand()
         order, limits = self.make_order(est_demand, self.food.get_quantity(), self.parent._storage.get_quantity())
         #order, limits = self.make_order(est_demand, self.food.get_quantity(), Food(1500).get_quantity())
