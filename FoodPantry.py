@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 # from FoodBank import FoodBank
-from constants import *
+from Global import *
 from utils import Food, mod_beta_random
 
 rng = np.random.default_rng()
@@ -100,16 +100,16 @@ class FoodPantry:
         """Predict client demand this week based on prior experience
         :return: A dictionary storing the quantity needed for each type of food.
         """
-        if not self.previous_record:
-            est_demand = self.mean_demand
+        if not config["pantry"]["use_real_demand"]:
+            if not self.previous_record:
+                est_demand = self.mean_demand
+            else:
+                est_demand = self.previous_record[-1]
         else:
-            est_demand = self.previous_record[-1]
-        """est_demand = {k: v * 1 for k, v in est_demand.items()}  # scale the estimation?
-        print(est_demand)
-        act_demand = dict()
-        for typ in PERSONAL_WEEKLY_DEMAND:
-            act_demand[typ] = self.clients[(typ, "demand")].sum().item()
-        print(act_demand, '\n')"""
+            # est_demand = {k: v * 1 for k, v in est_demand.items()}  # scale the estimation?
+            est_demand = dict()
+            for typ in PERSONAL_WEEKLY_DEMAND:
+                est_demand[typ] = self.clients[(typ, "demand")].sum().item()
         return est_demand
 
     def make_order(self, demand: Dict[str, float], stock: Dict[str, float], bank_stock: Dict[str, float]) -> \
@@ -151,10 +151,10 @@ class FoodPantry:
             order[packaged] = min(gap[typ] - order[fresh], bank_stock[packaged])
             # Calculate the limit on fresh food of this type
             fresh_qty = stock[fresh] + order[fresh]
+            limits[typ] = float("inf")
             if fresh_qty < demand[typ]:
-                limits[typ] = fresh_qty * 1.2 / self.num_households
-            else:
-                limits[typ] = float("inf")
+                if config["pantry"]["set_limit"]:
+                    limits[typ] = fresh_qty * 1.2 / self.num_households
         return order, limits
 
     @classmethod
@@ -254,7 +254,7 @@ class FoodPantry:
         >>> purchased_0.sum() == 0
         True
         >>> served_0
-        5
+        0
         """
         if isinstance(food, Food):
             food = food.df
@@ -270,7 +270,10 @@ class FoodPantry:
             food.loc[pivot, "quantity"] = cum_stock[pivot] - tot_demand
             food = food[pivot:]
             purchased = demand
-            served = num_households
+            if tot_demand == 0:
+                served = 0
+            else:
+                served = num_households
         else:
             food = Food().df
             # Get the index of the first client who cannot get enough food
@@ -391,7 +394,9 @@ if __name__ == '__main__':
     print(f"Total average utility {sum(utilities) / len(utilities)}")
     print("{:.2%} of clients get all demand satisfied".format(sum(all_served) / (households * num_days)))
     print("{:.2%} of clients get at least some food".format(sum(partly_served) / (households * num_days)))
-    tot_waste = dict()
+    waste_per_type = dict()
     for typ in TYPES:
-        tot_waste[typ] = sum(w[typ] for w in wastes) / num_days
-    print(tot_waste)
+        waste_per_type[typ] = sum(w[typ] for w in wastes) / num_days
+    tot_waste = sum(v for v in waste_per_type.values())
+    print(f"Daily waste per type: {waste_per_type}")
+    print(f"Daily total waste: {tot_waste}")

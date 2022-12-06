@@ -1,7 +1,7 @@
 from typing import List, Tuple, Dict
 import pandas as pd
 from FoodPantry import FoodPantry
-from constants import Global, TYPES
+from Global import Global, TYPES
 from utils import Food
 import time
 
@@ -115,7 +115,7 @@ if __name__ == '__main__':
     utilities = []
     wastes = []
     served_ls = []
-    num_days = 7
+    num_days = 21
     foodbank = FoodBank(initial_storage=500000)
     start = time.time()
     for i in range(num_days):
@@ -135,10 +135,12 @@ if __name__ == '__main__':
     end = time.time()
     print(f"It took {end - start} seconds")
     print(f"Total average utility {sum(utilities) / len(utilities)}")
-    print("{:.2%} of clients get all demand satisfied".format(sum(all_served) / (100 * 166)))
-    print("{:.2%} of clients get at least some food".format(sum(partly_served) / (100 * 166)))
-    tot_waste = dict()
+    print("{:.2%} of clients get all demand satisfied".format(sum(all_served) / (100 * 166) / num_days * 7))
+    print("{:.2%} of clients get at least some food".format(sum(partly_served) / (100 * 166) / num_days * 7))
+    waste_per_type = dict()
     for typ in TYPES:
-        tot_waste[typ] = sum(w[typ] for w in wastes) / num_days
-    print(tot_waste)
+        waste_per_type[typ] = sum(w[typ] for w in wastes) / num_days
+    tot_waste = sum(v for v in waste_per_type.values())
+    print(f"Daily waste per type: {waste_per_type}")
+    print(f"Daily total waste: {tot_waste}")
 

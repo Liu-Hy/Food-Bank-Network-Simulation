@@ -3,7 +3,7 @@ from typing import Dict
 import numpy as np
 import pandas as pd
 
-from constants import *
+from Global import *
 
 
 def mod_beta_random(low: float, high: float, mean: float, std: float, samples: int) -> np.ndarray:
