@@ -169,7 +169,7 @@ if __name__ == '__main__':
     end = time.time()
     print(f"It took {end - start} seconds")
 
-    print(f"Total utility {statistics.mean(tot_util)} +- {statistics.stdev(tot_util)}")
+    print(f"Total utility {statistics.mean(tot_util)} +- {statistics.stdev(tot_util)}")  # 除以squrt(100)
     print(f"{statistics.mean(tot_all_served)*100} +- {statistics.stdev(tot_all_served)*100} % of clients get all demand satisfied")
     print(f"{statistics.mean(tot_partly_served)*100} +- {statistics.stdev(tot_partly_served)*100} % of clients get at least some food")
     print(f"Total waste {statistics.mean(tot_waste)} +- {statistics.stdev(tot_waste)}")
