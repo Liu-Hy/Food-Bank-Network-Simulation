@@ -6,6 +6,7 @@ import pandas as pd
 from Global import *
 
 
+
 def mod_beta_random(low: float, high: float, mean: float, std: float, samples: int) -> np.ndarray:
     """
     Generate random numbers from a transformed Beta distribution
