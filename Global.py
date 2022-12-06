@@ -69,7 +69,11 @@ class Global:
 
   @property
   def base_prices(self):
-    return self._base_prices
+    """Applies inflation to base prices
+
+    :return: base prices dictionary with inclation applied
+    """
+    return { k: v * self._price_inflation_pct for k, v in self._base_prices.items() }
 
 
 if __name__ == '__main__':
