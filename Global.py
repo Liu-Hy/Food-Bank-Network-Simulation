@@ -24,7 +24,6 @@ FAMILY_DISTRIBUTION = [0.2845, 0.3503, 0.1503, 0.1239, 0.0583, 0.0203] + ([0.003
 ELASTICITY = {STP: -0.3, FV: -0.5, PT: -0.6}
 
 
-
 class Global:
   """Setters should only be used by simulation. Getters can be used by other classes.
   """
@@ -37,6 +36,7 @@ class Global:
     FPT: 0,
     PPT: 0,
   }
+  config = {"pantry": {"set_limit": False, "use_real_demand": False}}
 
   @classmethod
   def add_day(self):

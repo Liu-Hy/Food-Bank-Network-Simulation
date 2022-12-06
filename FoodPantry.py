@@ -5,19 +5,21 @@ from typing import Dict, Tuple
 import numpy as np
 import pandas as pd
 
-# from FoodBank import Foodbank
-from constants import *
+# from FoodBank import FoodBank
+from Global import *
 from utils import Food, mod_beta_random
 
 rng = np.random.default_rng()
 
 
 class FoodPantry:
-    def __init__(self, parent, num_households=100):
+    def __init__(self, parent, num_households=100, config=None):
         self.parent = parent
         self.num_households = num_households
+        self.config = config if config else Global.config
         self.clients = self.generate_clients()
         self.num_people = self.clients[("num_people", "")].sum()
+        # Inferred from interview and statistics, clients on average need 40% of their demand from foodbanks
         self.mean_demand = {k: (v["mean"] * self.num_people * 0.4) for k, v in PERSONAL_WEEKLY_DEMAND.items()}
         self.food = Food()
         self.operation_day = rng.integers(0, 7)
@@ -99,16 +101,16 @@ class FoodPantry:
         """Predict client demand this week based on prior experience
         :return: A dictionary storing the quantity needed for each type of food.
         """
-        if not self.previous_record:
-            est_demand = self.mean_demand
+        if not self.config["pantry"]["use_real_demand"]:
+            if not self.previous_record:
+                est_demand = self.mean_demand
+            else:
+                est_demand = self.previous_record[-1]
         else:
-            est_demand = self.previous_record[-1]
-        """est_demand = {k: v * 1 for k, v in est_demand.items()}  # scale the estimation?
-        print(est_demand)
-        act_demand = dict()
-        for typ in PERSONAL_WEEKLY_DEMAND:
-            act_demand[typ] = self.clients[(typ, "demand")].sum().item()
-        print(act_demand, '\n')"""
+            # est_demand = {k: v * 1 for k, v in est_demand.items()}  # scale the estimation?
+            est_demand = dict()
+            for typ in PERSONAL_WEEKLY_DEMAND:
+                est_demand[typ] = self.clients[(typ, "demand")].sum().item()
         return est_demand
 
     def make_order(self, demand: Dict[str, float], stock: Dict[str, float], bank_stock: Dict[str, float]) -> \
@@ -150,10 +152,10 @@ class FoodPantry:
             order[packaged] = min(gap[typ] - order[fresh], bank_stock[packaged])
             # Calculate the limit on fresh food of this type
             fresh_qty = stock[fresh] + order[fresh]
+            limits[typ] = float("inf")
             if fresh_qty < demand[typ]:
-                limits[typ] = fresh_qty * 1.2 / self.num_households
-            else:
-                limits[typ] = float("inf")
+                if self.config["pantry"]["set_limit"]:
+                    limits[typ] = fresh_qty * 1.2 / self.num_households
         return order, limits
 
     @classmethod
@@ -253,7 +255,7 @@ class FoodPantry:
         >>> purchased_0.sum() == 0
         True
         >>> served_0
-        5
+        0
         """
         if isinstance(food, Food):
             food = food.df
@@ -269,7 +271,10 @@ class FoodPantry:
             food.loc[pivot, "quantity"] = cum_stock[pivot] - tot_demand
             food = food[pivot:]
             purchased = demand
-            served = num_households
+            if tot_demand == 0:
+                served = 0
+            else:
+                served = num_households
         else:
             food = Food().df
             # Get the index of the first client who cannot get enough food
@@ -352,15 +357,15 @@ class FoodPantry:
         >>> pantry = FoodPantry(None)
         >>> waste, order, utility, num_served = pantry.run_one_day()
         """
-        # if (Global.get_day() % 7) != self.operation_day:
-        # return
+        if (Global.get_day() % 7) != self.operation_day:
+            return
         self.initialize_weekly_demand()
-        waste = self.food.quality_control(num_days=1)
+        waste = self.food.quality_control(num_days=7)
         est_demand = self.estimate_demand()
-        # order, limits = self.make_order(est_demand, self.food.get_quantity(), self.parent.food.get_quantity())
-        order, limits = self.make_order(est_demand, self.food.get_quantity(), Food(2000).get_quantity())
-        # suppl = self.parent.food.subtract(order)  # Modifies foodbank.food in-place!
-        suppl = Food(2000).subtract(order)
+        order, limits = self.make_order(est_demand, self.food.get_quantity(), self.parent._storage.get_quantity())
+        #order, limits = self.make_order(est_demand, self.food.get_quantity(), Food(1500).get_quantity())
+        suppl = self.parent._storage.subtract(order)  # Modifies foodbank.food in-place!
+        #suppl = Food(1500).subtract(order)
         self.food.add(suppl)
         self.food.sort_by_freshness()
         self.clients = self.clients.sample(frac=1).reset_index(drop=True)
@@ -390,7 +395,9 @@ if __name__ == '__main__':
     print(f"Total average utility {sum(utilities) / len(utilities)}")
     print("{:.2%} of clients get all demand satisfied".format(sum(all_served) / (households * num_days)))
     print("{:.2%} of clients get at least some food".format(sum(partly_served) / (households * num_days)))
-    tot_waste = dict()
+    waste_per_type = dict()
     for typ in TYPES:
-        tot_waste[typ] = sum(w[typ] for w in wastes) / num_days
-    print(tot_waste)
+        waste_per_type[typ] = sum(w[typ] for w in wastes) / num_days
+    waste_qty = sum(v for v in waste_per_type.values())
+    print(f"Daily waste per type: {waste_per_type}")
+    print(f"Daily total waste: {waste_qty}")
