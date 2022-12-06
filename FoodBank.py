@@ -1,4 +1,4 @@
-import FoodPantry
+from FoodPantry import *
 import pandas as pd
 from utils import Food
 from typing import List, Dict, Tuple
