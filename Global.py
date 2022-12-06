@@ -23,6 +23,9 @@ FAMILY_DISTRIBUTION = [0.2845, 0.3503, 0.1503, 0.1239, 0.0583, 0.0203] + ([0.003
 
 ELASTICITY = {STP: -0.3, FV: -0.5, PT: -0.6}
 
+STOCKPILE_RATIO=1/26 #foodbanks have 2 weeks of stored food (info from interview)
+
+FOOD_PURCHASE_BUDGET_RATIO=0.10 #foodbanks use roughly 10% of annual budget for food purchase (info from disclosure)
 
 class Global:
   """Setters should only be used by simulation. Getters can be used by other classes.

@@ -1,4 +1,4 @@
-import FoodPantry
+from FoodPantry import *
 import pandas as pd
 from utils import Food
 from typing import List, Dict, Tuple
@@ -12,11 +12,11 @@ class FoodBank:
     :param food_insecure_pop: Number of food insecure people. Used to estimate number of pantries
     :param initial_storage: Initial storage of food in pounds. Value given to Food class
     """
-    # we estimated this number from real data of the Eastern Food Bank
+    # we estimated this number from real data of the Eastern Illinois Food Bank
     ppl_per_pantry = 245
     # we assume half of the food insecure people actually use the bank
     num_pantries = int(.5 * food_insecure_pop / ppl_per_pantry)
-    self.pantries:List['FoodPantry'] = [FoodPantry(self) for _ in range(num_pantries)]
+    self.pantries:List[FoodPantry] = [FoodPantry(self) for _ in range(num_pantries)]
     self.total_utility = None
     self.total_waste = None
 
