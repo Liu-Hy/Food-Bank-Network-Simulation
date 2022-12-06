@@ -14,14 +14,16 @@ def initialize_food_banks(food_bank_df: pd.DataFrame) -> list[FoodBank]:
     (pounds of food distributed and programming budget) to initialize food banks
     :param food_bank_df: dataframe with food bank data per row
     :return: list of food_banks initialized with pre-generated input data
-    #>>> input_csv=pd.read_csv("input.csv").head(1)
-    #>>> len(initialize_food_banks(input_csv)[0].pantries) #(323340/2)/245 = 659 rounded down
+    >>> input_csv=pd.read_csv("input.csv").head(1)
+    >>> len(initialize_food_banks(input_csv)[0].pantries) #(323340/2)/245 = 659 rounded down
     659
 
 
     """
+
     banks = []
     for row in food_bank_df.itertuples():
+        print("Creating food bank in: "+ row.city)
         stored_food = row.estimated_pounds_per_year * STOCKPILE_RATIO
         banks.append(FoodBank(row.food_insecure_pop, stored_food))
     return banks
@@ -111,22 +113,22 @@ def generate_good_prices(price_summary: pd.DataFrame, num_days: int) -> dict[np.
     price_dict = dict()
     price_summary = price_summary.set_index("good")
 
-    price_dict["gas"] = mod_beta_random(low=price_summary.loc["gas"]["min"], high=price_summary.loc["gas"]["max"], mean=
+    price_dict[GAS] = mod_beta_random(low=price_summary.loc["gas"]["min"], high=price_summary.loc["gas"]["max"], mean=
                                         price_summary.loc["gas"]["mean"], std=price_summary.loc["gas"]["std"],
                                         samples=num_days)
-    price_dict["ffv"] = mod_beta_random(low=price_summary.loc["ffv"]["min"], high=price_summary.loc["ffv"]["max"], mean=
+    price_dict[FFV] = mod_beta_random(low=price_summary.loc["ffv"]["min"], high=price_summary.loc["ffv"]["max"], mean=
                                         price_summary.loc["ffv"]["mean"], std=price_summary.loc["ffv"]["std"],
                                         samples=num_days)
-    price_dict["fpt"] = mod_beta_random(low=price_summary.loc["meat"]["min"], high=price_summary.loc["meat"]["max"], mean=
+    price_dict[FPT] = mod_beta_random(low=price_summary.loc["meat"]["min"], high=price_summary.loc["meat"]["max"], mean=
                                         price_summary.loc["meat"]["mean"], std=price_summary.loc["meat"]["std"],
                                         samples=num_days)
-    price_dict["stp"] = mod_beta_random(low=price_summary.loc["staples"]["min"], high=price_summary.loc["staples"]["max"]
+    price_dict[STP] = mod_beta_random(low=price_summary.loc["staples"]["min"], high=price_summary.loc["staples"]["max"]
                                         , mean=price_summary.loc["staples"]["mean"], std=price_summary.loc["staples"]["std"],
                                         samples=num_days)
-    price_dict["pfv"] = mod_beta_random(low=price_summary.loc["ffv"]["min"], high=price_summary.loc["ffv"]["max"], mean=
+    price_dict[PFV] = mod_beta_random(low=price_summary.loc["ffv"]["min"], high=price_summary.loc["ffv"]["max"], mean=
                                         price_summary.loc["ffv"]["mean"], std=price_summary.loc["ffv"]["std"],
                                         samples=num_days) * PACKAGED_COST_RATIO # modify packaged price
-    price_dict["ppt"] = mod_beta_random(low=price_summary.loc["meat"]["min"], high=price_summary.loc["meat"]["max"], mean=
+    price_dict[PPT] = mod_beta_random(low=price_summary.loc["meat"]["min"], high=price_summary.loc["meat"]["max"], mean=
                                         price_summary.loc["meat"]["mean"], std=price_summary.loc["meat"]["std"],
                                         samples=num_days) * PACKAGED_COST_RATIO # modify packaged price
 
@@ -148,5 +150,35 @@ def redistribute_food(food_banks: list) -> None:
 
 
 if __name__ == "__main__":
-    food_banks_df = pd.read_csv("input.csv")
+    food_banks_df = pd.read_csv("input.csv").head(5)
     prices_df = pd.read_csv("price_summary.csv")
+    num_days=365
+    inflation_rate=1.08 # settable (to add)
+    #initialize Global state
+    global_state=Global()
+    global_state._price_inflation_pct=inflation_rate
+
+    food_banks=initialize_food_banks(food_banks_df)
+    print(food_banks)
+    daily_budget=generate_funds_distribution(food_banks_df, num_days)
+    daily_donations=generate_food_distribution(food_banks_df, num_days)
+    good_prices=generate_good_prices(prices_df, num_days)
+
+    for i in range(0, num_days):
+        for g in good_prices:
+            Global._base_prices[g]=good_prices[g][i]
+        print(Global._base_prices)
+        for j in range(0, len(food_banks)):
+            curr=food_banks[j]
+            print(daily_budget[j,i])
+            print(daily_donations[j,i])
+            curr.run_one_day(budget=daily_budget[j,i], food_donations=daily_donations[j,i])
+            print(curr.total_waste)
+
+
+
+
+
+
+
+

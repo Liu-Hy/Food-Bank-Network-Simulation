@@ -3,6 +3,7 @@ FFV = "fresh_fruits_and_vegetables"
 PFV = "packaged_fruits_and_vegetables"
 FPT = "fresh_protein"
 PPT = "packaged_protein"
+GAS = "gas_price"
 
 FV = "fruits_and_vegetables"
 PT = "protein"
@@ -39,6 +40,7 @@ class Global:
     PFV: 0,
     FPT: 0,
     PPT: 0,
+    GAS: 0
   }
   config = {"pantry": {"set_limit": False, "use_real_demand": False}}
 
@@ -64,6 +66,10 @@ class Global:
   @classmethod
   def get_food_types(self):
     return self._base_prices.keys()
+
+  @property
+  def base_prices(self):
+    return self._base_prices
 
 
 if __name__ == '__main__':
