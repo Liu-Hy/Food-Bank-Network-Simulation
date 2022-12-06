@@ -5,6 +5,7 @@ from Global import Global, TYPES
 from utils import Food
 import time
 import random
+import statistics
 
 
 class FoodBank:
@@ -15,7 +16,7 @@ class FoodBank:
         """
         # we assume half of the food insecure people actually use the bank
         num_pantries = 166
-        self.pantries: List['FoodPantry'] = [FoodPantry(self) for _ in range(num_pantries)]
+        self.pantries: List['FoodPantry'] = [FoodPantry(self, num_households=100) for _ in range(num_pantries)]
         self.total_utility = None
         self.total_waste = None
         self.total_served = None
@@ -32,8 +33,6 @@ class FoodBank:
         """
         return self._storage.df.copy()
 
-    def randomize_pantry_order(self):
-        random.shuffle(self.pantries)
 
     def run_one_day(self, budget: float, food_donations: float) -> Tuple[Dict[str, float], Dict[str, float], float]:
         """Runs simulation for the day. Also calls `run_one_day` for each pantry it serves.
@@ -116,36 +115,61 @@ class FoodBank:
             return total_utility + utility
 
 if __name__ == '__main__':
-    utilities = []
-    wastes = []
-    served_ls = []
-    num_days = 7
-    foodbank = FoodBank(initial_storage=500000)
+    tot_util = []
+    tot_waste = []
+    tot_all_served = []
+    tot_partly_served = []
     start = time.time()
-    for i in range(num_days):
-        Global.add_day()
-        waste = foodbank._storage.quality_control(1)
-        wastes.append(waste)
-        new_food = Food.generate_donation(33333)
-        foodbank._storage.add(new_food)
-        foodbank.randomize_pantry_order()
-        for pantry in foodbank.pantries:
-            result = pantry.run_one_day()
-            if result is not None:
-                waste, order, utility, num_served = result
-                utilities.append(utility)
-                wastes.append(waste)
-                served_ls.append(num_served)
-    all_served, partly_served = list((zip(*served_ls)))
+    for run in range(100):
+        Global._current_day = 0
+        print(Global.get_day())
+        utilities = []
+        wastes = []
+        served_ls = []
+        num_days = 7
+        foodbank = FoodBank(initial_storage=500000)
+        #foodbank.pantries[0].config = {"pantry": {"set_limit": False, "use_real_demand": False}}
+        num_panties = len(foodbank.pantries)
+        pantry_order = list(range(num_panties))
+        for i in range(num_days):
+            Global.add_day()
+            print(Global.get_day())
+            waste = foodbank._storage.quality_control(1)
+            wastes.append(waste)  # comment this line to trace a specific pantry
+            new_food = Food.generate_donation(33333)
+            foodbank._storage.add(new_food)
+            random.shuffle(pantry_order)
+            for p in pantry_order:
+                result = foodbank.pantries[p].run_one_day()
+                if result is not None:
+                    #if p == 0:
+                    waste, order, utility, num_served = result
+                    utilities.append(utility)
+                    wastes.append(waste)
+                    served_ls.append(num_served)
+
+        waste_per_type = dict()
+        for typ in TYPES:
+            waste_per_type[typ] = sum(w[typ] for w in wastes) / num_days
+        waste_qty = sum(v for v in waste_per_type.values())
+        # print(f"Daily waste per type: {waste_per_type}")
+        # print(f"Daily waste in pounds: {waste_qty}")
+        avg_utility = sum(utilities) / len(utilities)
+
+        all_served, partly_served = list((zip(*served_ls)))
+
+        all_served_rate = sum(all_served) / (100 * 166) / num_days * 7 # (100 * 166) when simulation all pantries. 100 for single pantry
+        partly_served_rate = sum(partly_served) / (100 * 166) / num_days * 7 # (100 * 166) when simulation all pantries. 100 for single pantry
+
+        tot_waste.append(waste_qty)
+        tot_util.append(avg_utility)
+        tot_all_served.append(all_served_rate)
+        tot_partly_served.append(partly_served_rate)
+
     end = time.time()
     print(f"It took {end - start} seconds")
-    print(f"Total average utility {sum(utilities) / len(utilities)}")
-    print("{:.2%} of clients get all demand satisfied".format(sum(all_served) / (100 * 166) / num_days * 7))
-    print("{:.2%} of clients get at least some food".format(sum(partly_served) / (100 * 166) / num_days * 7))
-    waste_per_type = dict()
-    for typ in TYPES:
-        waste_per_type[typ] = sum(w[typ] for w in wastes) / num_days
-    tot_waste = sum(v for v in waste_per_type.values())
-    print(f"Daily waste per type: {waste_per_type}")
-    print(f"Daily total waste: {tot_waste}")
 
+    print(f"Total utility {statistics.mean(tot_util)} +- {statistics.stdev(tot_util)}")
+    print(f"{statistics.mean(tot_all_served)*100} +- {statistics.stdev(tot_all_served)*100} % of clients get all demand satisfied")
+    print(f"{statistics.mean(tot_partly_served)*100} +- {statistics.stdev(tot_partly_served)*100} % of clients get at least some food")
+    print(f"Total waste {statistics.mean(tot_waste)} +- {statistics.stdev(tot_waste)}")

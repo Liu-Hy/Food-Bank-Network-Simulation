@@ -13,9 +13,10 @@ rng = np.random.default_rng()
 
 
 class FoodPantry:
-    def __init__(self, parent, num_households=100):
+    def __init__(self, parent, num_households=100, config=None):
         self.parent = parent
         self.num_households = num_households
+        self.config = config if config else Global.config
         self.clients = self.generate_clients()
         self.num_people = self.clients[("num_people", "")].sum()
         # Inferred from interview and statistics, clients on average need 40% of their demand from foodbanks
@@ -100,7 +101,7 @@ class FoodPantry:
         """Predict client demand this week based on prior experience
         :return: A dictionary storing the quantity needed for each type of food.
         """
-        if not config["pantry"]["use_real_demand"]:
+        if not self.config["pantry"]["use_real_demand"]:
             if not self.previous_record:
                 est_demand = self.mean_demand
             else:
@@ -153,7 +154,7 @@ class FoodPantry:
             fresh_qty = stock[fresh] + order[fresh]
             limits[typ] = float("inf")
             if fresh_qty < demand[typ]:
-                if config["pantry"]["set_limit"]:
+                if self.config["pantry"]["set_limit"]:
                     limits[typ] = fresh_qty * 1.2 / self.num_households
         return order, limits
 
@@ -397,6 +398,6 @@ if __name__ == '__main__':
     waste_per_type = dict()
     for typ in TYPES:
         waste_per_type[typ] = sum(w[typ] for w in wastes) / num_days
-    tot_waste = sum(v for v in waste_per_type.values())
+    waste_qty = sum(v for v in waste_per_type.values())
     print(f"Daily waste per type: {waste_per_type}")
-    print(f"Daily total waste: {tot_waste}")
+    print(f"Daily total waste: {waste_qty}")
