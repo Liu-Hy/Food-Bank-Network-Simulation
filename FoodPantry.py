@@ -155,7 +155,7 @@ class FoodPantry:
             limits[typ] = float("inf")
             if fresh_qty < demand[typ]:
                 if self.config["pantry"]["set_limit"]:
-                    limits[typ] = fresh_qty * 1.2 / self.num_households
+                    limits[typ] = fresh_qty * 1.3 / self.num_people
         return order, limits
 
     @classmethod
@@ -313,10 +313,10 @@ class FoodPantry:
             elif len(options) == 2:
                 fresh, packaged = options
                 # Transfer out-of-limit demand for fresh food to packaged food
-                limit = limits[typ]
-                mask = (self.clients[(typ, "demand")] > limit)
-                self.clients.loc[mask, (typ, "demand_alt")] = self.clients.loc[mask, (typ, "demand")] - limit
-                self.clients.loc[mask, (typ, "demand")] = limit
+                quota = self.clients[("num_people", "")] * limits[typ]
+                mask = (self.clients[(typ, "demand")] > quota)
+                self.clients.loc[mask, (typ, "demand_alt")] = self.clients.loc[mask, (typ, "demand")] - quota
+                self.clients.loc[mask, (typ, "demand")] = quota
                 purchased_fresh, remain, served = self.allocate_food(self.food.select(fresh),
                                                                      self.clients[(typ, "demand")])
                 #print(served)
