@@ -27,6 +27,7 @@ STOCKPILE_RATIO=1/26 #foodbanks have 2 weeks of stored food (info from interview
 
 FOOD_PURCHASE_BUDGET_RATIO=0.10 #foodbanks use roughly 10% of annual budget for food purchase (info from disclosure)
 
+PACKAGED_COST_RATIO=0.95 #packaged food slightly cheaper than fresh food
 class Global:
   """Setters should only be used by simulation. Getters can be used by other classes.
   """
