@@ -13,10 +13,10 @@ rng = np.random.default_rng()
 
 
 class FoodPantry:
-    def __init__(self, parent, num_households=100, config=None):
+    def __init__(self, parent, num_households=100, config=Global.config):
         self.parent = parent
         self.num_households = num_households
-        self.config = config if config else Global.config
+        self.config = config
         self.clients = self.generate_clients()
         self.num_people = self.clients[("num_people", "")].sum()
         # Inferred from interview and statistics, clients on average need 40% of their demand from foodbanks
