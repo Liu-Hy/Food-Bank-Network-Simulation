@@ -113,26 +113,27 @@ def generate_good_prices(price_summary: pd.DataFrame, num_days: int) -> dict[np.
     price_dict = dict()
     price_summary = price_summary.set_index("good")
 
-    price_dict[GAS] = mod_beta_random(low=price_summary.loc["gas"]["min"], high=price_summary.loc["gas"]["max"], mean=
-                                        price_summary.loc["gas"]["mean"], std=price_summary.loc["gas"]["std"],
-                                        samples=num_days)
-    price_dict[FFV] = mod_beta_random(low=price_summary.loc["ffv"]["min"], high=price_summary.loc["ffv"]["max"], mean=
-                                        price_summary.loc["ffv"]["mean"], std=price_summary.loc["ffv"]["std"],
-                                        samples=num_days)
-    price_dict[FPT] = mod_beta_random(low=price_summary.loc["meat"]["min"], high=price_summary.loc["meat"]["max"], mean=
-                                        price_summary.loc["meat"]["mean"], std=price_summary.loc["meat"]["std"],
-                                        samples=num_days)
-    price_dict[STP] = mod_beta_random(low=price_summary.loc["staples"]["min"], high=price_summary.loc["staples"]["max"]
-                                        , mean=price_summary.loc["staples"]["mean"], std=price_summary.loc["staples"]["std"],
-                                        samples=num_days)
-    price_dict[PFV] = mod_beta_random(low=price_summary.loc["ffv"]["min"], high=price_summary.loc["ffv"]["max"], mean=
-                                        price_summary.loc["ffv"]["mean"], std=price_summary.loc["ffv"]["std"],
-                                        samples=num_days) * PACKAGED_COST_RATIO # modify packaged price
-    price_dict[PPT] = mod_beta_random(low=price_summary.loc["meat"]["min"], high=price_summary.loc["meat"]["max"], mean=
-                                        price_summary.loc["meat"]["mean"], std=price_summary.loc["meat"]["std"],
-                                        samples=num_days) * PACKAGED_COST_RATIO # modify packaged price
+    price_dict[GAS] = call_mod_for_good(price_summary, "gas", num_days)
+    price_dict[FFV] = call_mod_for_good(price_summary, "ffv", num_days)
+    price_dict[FPT] = call_mod_for_good(price_summary, "meat", num_days)
+    price_dict[STP] = call_mod_for_good(price_summary, "staples", num_days)
+    price_dict[PFV] = call_mod_for_good(price_summary, "ffv", num_days) * PACKAGED_COST_RATIO # modify packaged price
+    price_dict[PPT] = call_mod_for_good(price_summary, "meat", num_days) * PACKAGED_COST_RATIO # modify packaged price
 
     return price_dict
+def call_mod_for_good(price_summary: pd.DataFrame,good:str, num_days:int)->np.ndarray:
+    """
+    :param price_summary: df of price data
+    :param good: string name of row
+    :param num_days: number of days
+    :return: distribution of good price
+
+    """
+    return mod_beta_random(low=price_summary.loc[good]["min"], high=price_summary.loc[good]["max"], mean=
+                    price_summary.loc[good]["mean"], std=price_summary.loc[good]["std"],
+                    samples=num_days)
+
+
 def tick_day(food_banks: list):
     """
 
@@ -169,7 +170,7 @@ if __name__ == "__main__":
     for i in range(0, num_days):
         for g in good_prices:
             Global._base_prices[g]=good_prices[g][i]
-        print(Global._base_prices)
+
         for j in range(0, len(food_banks)):
             curr=food_banks[j]
             print(daily_budget[j,i])
