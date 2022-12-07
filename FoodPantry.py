@@ -371,7 +371,7 @@ class FoodPantry:
         self.clients = self.clients.sample(frac=1).reset_index(drop=True)
         num_served = self.hold_pantry(limits)
         utility = self.get_utility()
-        return waste, order, utility, num_served
+        return waste, order, utility, num_served, est_demand
 
 
 if __name__ == '__main__':
