@@ -32,6 +32,9 @@ PACKAGED_COST_RATIO=0.95 #packaged food slightly cheaper than fresh food
 class Global:
   """Setters should only be used by simulation. Getters can be used by other classes.
   """
+  # we originally estimated this number from real data of the Eastern Illinois Food Bank
+  # we then decided on increasing that number to have less pantries and increase efficiency
+  people_per_pantry = 500
   _current_day:int = 0
   _price_inflation_pct: float  # dictionary with TYPE (str) float pairs. Set by Simulation.
   _base_prices = { # base prices for each food type
