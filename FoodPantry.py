@@ -187,7 +187,7 @@ class FoodPantry:
             assert -1 <= param < 0, "The quadratic coefficient should be between -1 and 0 for quadratic functions!"
             return param * np.square(data) + (1 - param) * data
 
-    def utility_per_type(self, typ: str) -> float:
+    def utility_per_type(self, typ: str) -> pd.Series:
         """After a pantry activity, estimate the increment in the utility of one type of food per household.
         :param typ: The type of food for which to calculate utility increment
         :return:
@@ -217,11 +217,12 @@ class FoodPantry:
             tot_util += self.utility_per_type(typ)
         return tot_util.sum() / (self.num_people * 3)
 
-    def allocate_food(self, food, demand) -> Tuple[pd.Series, pd.DataFrame]:
+    def allocate_food(self, food, demand) -> Tuple[pd.Series, pd.DataFrame, int]:
         """Clients line up to purchase one type of food. Record their purchase and update the pantry inventory.
         :param food: the dataframe of some type of food
         :param demand: a pd.Series object storing the demand of clients in the queue
-        :return: a pd.Series storing the amount purchased by clients, and a pd.DataFrame storing the remaining food
+        :return: a pd.Series storing the amount purchased by clients, a pd.DataFrame storing the remaining food, and the
+        number of clients who get enough food.
         >>> pantry = FoodPantry(None)
         >>> demand = pd.Series([10.] * 5)
         >>> total = demand.sum() / TYPES[STP]["proportion"]
@@ -255,7 +256,7 @@ class FoodPantry:
         >>> purchased_0.sum() == 0
         True
         >>> served_0
-        0
+        5
         """
         if isinstance(food, Food):
             food = food.df
@@ -271,10 +272,7 @@ class FoodPantry:
             food.loc[pivot, "quantity"] = cum_stock[pivot] - tot_demand
             food = food[pivot:]
             purchased = demand
-            if tot_demand == 0:
-                served = 0
-            else:
-                served = num_households
+            served = num_households
         else:
             food = Food().df
             # Get the index of the first client who cannot get enough food
@@ -284,7 +282,7 @@ class FoodPantry:
             served = pivot  # (served+1) clients get some food
         return purchased, food, served
 
-    def hold_pantry(self, limits: Dict[str, float]):
+    def hold_pantry(self, limits: Dict[str, float]) -> Tuple[int, int]:
         """Hold a pantry activity. Although in reality one client shops multiple types of food at once, to avoid
         unnecessary computation, we transform it to the equivalent process of allocating food multiple times, once for
         each type of food.
@@ -350,7 +348,7 @@ class FoodPantry:
         partly_served = min(max(served_per_type) + 1, self.num_households)
         return all_served, partly_served
 
-    def run_one_day(self) -> Tuple[Dict[str, float], Dict[str, float], float]:
+    def run_one_day(self) -> Tuple[Dict[str, float], Dict[str, float], float, Tuple[int, int], Dict[str, float]]:
         """ Run the simulation for one day.
         Changes self.clients, self.food and self.parent.food in place.
         :return:
@@ -371,7 +369,7 @@ class FoodPantry:
         self.clients = self.clients.sample(frac=1).reset_index(drop=True)
         num_served = self.hold_pantry(limits)
         utility = self.get_utility()
-        return waste, order, utility, num_served
+        return waste, order, utility, num_served, est_demand
 
 
 if __name__ == '__main__':

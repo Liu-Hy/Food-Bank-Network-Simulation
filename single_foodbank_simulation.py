@@ -15,8 +15,8 @@ class FoodBank:
         :param initial_storage: Initial storage of food in pounds. Value given to Food class
         """
         # we assume half of the food insecure people actually use the bank
-        num_pantries = 166
-        self.pantries: List['FoodPantry'] = [FoodPantry(self, num_households=100) for _ in range(num_pantries)]
+        num_pantries = 33 # 166
+        self.pantries: List['FoodPantry'] = [FoodPantry(self, num_households=500) for _ in range(num_pantries)]
         self.total_utility = None
         self.total_waste = None
         self.total_served = None
@@ -120,7 +120,7 @@ if __name__ == '__main__':
     tot_all_served = []
     tot_partly_served = []
     start = time.time()
-    for run in range(100):
+    for run in range(3):
         Global._current_day = 0
         print(Global.get_day())
         utilities = []
@@ -143,7 +143,7 @@ if __name__ == '__main__':
                 result = foodbank.pantries[p].run_one_day()
                 if result is not None:
                     #if p == 0:
-                    waste, order, utility, num_served = result
+                    waste, order, utility, num_served, _ = result
                     utilities.append(utility)
                     wastes.append(waste)
                     served_ls.append(num_served)
