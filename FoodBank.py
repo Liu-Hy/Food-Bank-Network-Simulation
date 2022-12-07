@@ -6,19 +6,15 @@ from Global import Global, TYPES
 
 
 class FoodBank:
-  def __init__(self, food_insecure_pop: int, initial_storage: float):
+  def __init__(self, food_insecure_pop:int, initial_storage:float, households_per_pantry:int = Global.households_per_pantry):
     """Food bank constructor
 
     :param food_insecure_pop: Number of food insecure people. Used to estimate number of pantries
     :param initial_storage: Initial storage of food in pounds. Value given to Food class
     """
-    # we estimated this number from real data of the Eastern Illinois Food Bank
-    ppl_per_pantry = 245
     # we assume half of the food insecure people actually use the bank
-    num_pantries = int(.5 * food_insecure_pop / ppl_per_pantry)
-    self.pantries:List[FoodPantry] = [FoodPantry(self) for _ in range(num_pantries)]
-    self.total_utility = None
-    self.total_waste = None
+    num_pantries = int(.5 * food_insecure_pop / households_per_pantry)
+    self.pantries:List[FoodPantry] = [FoodPantry(self, num_households=households_per_pantry) for _ in range(num_pantries)]
 
     food_types = Global.get_food_types()
     self.pantry_demand = dict(zip(food_types, [0] * len(food_types)))
