@@ -43,22 +43,25 @@ class FoodBank:
     new_food = Food.generate_donation(food_donations)
     self._storage.add(new_food)
 
+    total_utility = 0
+    total_waste = None
+
     for pantry in self.pantries:
       pantry_output = pantry.run_one_day()
       if pantry_output is None:
         continue
-      waste, order, utility = pantry_output
-      self.total_utility = FoodBank.increment_utility(self.total_utility, utility)
-      self.total_waste = FoodBank.increment_waste(self.total_waste, waste)
+      waste, order, utility, tuple_served, true_order = pantry_output
+      total_utility = FoodBank.increment_utility(total_utility, utility)
+      total_waste = FoodBank.increment_waste(total_waste, waste)
       self.update_demand(order)
 
     self.purchase_food(budget)
 
-    return self.total_waste, self.pantry_demand, self.total_utility
+    return total_waste, self.pantry_demand, total_utility, tuple_served
 
   @classmethod
   def increment_waste(total_waste, new_waste):
-    return { food: (total_waste[food] + waste) for food, waste in new_waste}
+    return { food: (total_waste[food] + waste) for food, waste in new_waste }
 
   def purchase_food(self, budget: float):
     """Purchases food using given budget
