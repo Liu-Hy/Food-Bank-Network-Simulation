@@ -21,6 +21,11 @@ class FoodBank:
 
     self._storage = Food(initial_storage)
 
+  # food that will be going bad soon with current level of demand
+    # projection of how much will be ordered
+  # food in demand with not enough supply
+    # orders that won't be met (based on true order)
+
   def food_storage(self):
     """API for retreaving food storage dataframe
 
