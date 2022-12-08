@@ -111,27 +111,47 @@ def generate_good_prices(price_summary: pd.DataFrame, num_days: int) -> dict[np.
     >>> np.mean(output["gas"])
     """
     price_dict = dict()
-    price_summary = price_summary.set_index("good")
 
-    price_dict[GAS] = call_mod_for_good(price_summary, "gas", num_days)
-    price_dict[FFV] = call_mod_for_good(price_summary, "ffv", num_days)
-    price_dict[FPT] = call_mod_for_good(price_summary, "meat", num_days)
-    price_dict[STP] = call_mod_for_good(price_summary, "staples", num_days)
-    price_dict[PFV] = call_mod_for_good(price_summary, "ffv", num_days) * PACKAGED_COST_RATIO # modify packaged price
-    price_dict[PPT] = call_mod_for_good(price_summary, "meat", num_days) * PACKAGED_COST_RATIO # modify packaged price
+    price_dict[GAS] = good_price_distr(price_summary, "gas", num_days)
+    price_dict[FFV] = good_price_distr(price_summary, "ffv", num_days)
+    price_dict[FPT] = good_price_distr(price_summary, "meat", num_days)
+    price_dict[STP] = good_price_distr(price_summary, "staples", num_days)
+    price_dict[PFV] = good_price_distr(price_summary, "ffv", num_days) * PACKAGED_COST_RATIO # modify packaged price
+    price_dict[PPT] = good_price_distr(price_summary, "meat", num_days) * PACKAGED_COST_RATIO # modify packaged price
 
     return price_dict
-def call_mod_for_good(price_summary: pd.DataFrame,good:str, num_days:int)->np.ndarray:
+def good_price_distr(price_summary: pd.DataFrame,good:str, num_days:int)->list[float]:
     """
+    Generate price distribution
+    starts at current price and performs a random walk
+    resistance grows as price approaches good max or min
+    mean change at
+
     :param price_summary: df of price data
     :param good: string name of row
     :param num_days: number of days
     :return: distribution of good price
-
+    >>> prices=pd.read_csv("price_summary.csv")
+    >>> good_price_distr(prices, "gas", 100)
     """
-    return mod_beta_random(low=price_summary.loc[good]["min"], high=price_summary.loc[good]["max"], mean=
-                    price_summary.loc[good]["mean"], std=price_summary.loc[good]["std"],
-                    samples=num_days)
+    price_summary = price_summary.set_index("good")
+    mean =price_summary.loc[good]["mean"]
+    std = price_summary.loc[good]["std"]
+    real_price=price_summary.loc[good]["latest_price"]
+
+    mean_delta = price_summary.loc[good]["mean_delta"]
+    std_delta = price_summary.loc[good]["std_delta"]
+
+    price_list=[real_price]
+    for i in range(1, num_days):
+        prev=price_list[i-1]
+        scale_factor=(mean-prev)/mean
+        scaled_change=mean_delta*scale_factor
+        change=np.random.normal(scaled_change,std_delta)
+        price_list.append(real_price+change)
+    return price_list
+
+
 
 
 def tick_day(food_banks: list):
@@ -142,9 +162,10 @@ def tick_day(food_banks: list):
     """
 
 
-def redistribute_food(food_banks: list) -> None:
+def redistribute_food(food_banks: list, distance_mat: np.ndarray, prices:dict=Global._base_prices) -> None:
     """
 
+    :param distance_mat: distance matrix between pairs of food banks
     :param food_banks: list of food banks to redistribute food between
     :return: None
     """
