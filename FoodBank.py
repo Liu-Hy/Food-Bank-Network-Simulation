@@ -7,10 +7,11 @@ from Global import Global, TYPES
 
 class FoodBank:
   def __init__(self, food_insecure_pop:int, initial_storage:float, households_per_pantry:int = Global.households_per_pantry):
-    """Food bank constructor
+    """Food bank constructor. Modify `food_insecure_pop` and `households_per_pantry` to simulate crisis.
 
     :param food_insecure_pop: Number of food insecure people. Used to estimate number of pantries
     :param initial_storage: Initial storage of food in pounds. Value given to Food class
+    :param households_per_pantry: default to global number
     """
     # we assume half of the food insecure people actually use the bank
     num_pantries = int(.5 * food_insecure_pop / households_per_pantry)
