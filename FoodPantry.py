@@ -360,9 +360,9 @@ class FoodPantry:
         self.initialize_weekly_demand()
         waste = self.food.quality_control(num_days=7)
         est_demand = self.estimate_demand()
-        order, limits = self.make_order(est_demand, self.food.get_quantity(), self.parent._storage.get_quantity())
+        order, limits = self.make_order(est_demand, self.food.get_quantity(), self.parent.get_food_quantity())
         #order, limits = self.make_order(est_demand, self.food.get_quantity(), Food(1500).get_quantity())
-        suppl = self.parent._storage.subtract(order)  # Modifies foodbank.food in-place!
+        suppl = self.parent.get_food_order(order)
         #suppl = Food(1500).subtract(order)
         self.food.add(suppl)
         self.food.sort_by_freshness()

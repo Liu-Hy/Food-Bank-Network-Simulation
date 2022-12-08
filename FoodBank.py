@@ -20,7 +20,8 @@ class FoodBank:
     food_types = Global.get_food_types()
     self.pantry_demand = dict(zip(food_types, [0] * len(food_types)))
 
-    self._storage = Food(initial_storage)
+    self.storage = Food(initial_storage)
+
 
   # food that will be going bad soon with current level of demand
     # projection of how much will be ordered
@@ -32,7 +33,7 @@ class FoodBank:
 
     :return: storage dataframe
     """
-    return self._storage.df.copy()
+    return self.storage.df.copy()
   
   def run_one_day(self, budget: float, food_donations: float) -> Tuple[Dict[str, float], Dict[str, float], float]:
     """Runs simulation for the day. Also calls `run_one_day` for each pantry it serves.
@@ -42,7 +43,7 @@ class FoodBank:
     :return: Overall waste, demand (based on orders) and utility of all pantries
     """
     new_food = Food.generate_donation(food_donations)
-    self._storage.add(new_food)
+    self.storage.add(new_food)
 
     total_utility = 0
     total_waste = None
@@ -60,6 +61,21 @@ class FoodBank:
 
     return total_waste, self.pantry_demand, total_utility, tuple_served
 
+  def get_food_quantity(self):
+    """Returns quantity of food in storage
+
+    :return:
+    """
+    return self.storage.get_quantity()
+  
+  def get_food_order(self, order):
+    """Fulfills given order
+
+    :param order: 
+    :return: order result
+    """
+    return self.storage.subtract(order)
+
   @classmethod
   def increment_waste(total_waste, new_waste):
     return { food: (total_waste[food] + waste) for food, waste in new_waste }
@@ -75,7 +91,7 @@ class FoodBank:
     quantity = [demand[t] * budget * Global._base_prices[t] for t in types]
 
     purchase = pd.DataFrame({"type": types, "remaining_days": remaining_days, "quantity": quantity})
-    self._storage.add(purchase)
+    self.storage.add(purchase)
 
 
   def get_pantry_demand_proportion(self):
