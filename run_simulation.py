@@ -100,7 +100,7 @@ def generate_food_distribution(food_bank_df: pd.DataFrame, num_days: int) -> np.
     return ret
 
 
-def generate_good_prices(price_summary: pd.DataFrame, num_days: int) -> dict[np.ndarray]:
+def generate_good_prices(price_summary: pd.DataFrame, num_days: int) -> dict[list[float]]:
     """
     Use statistics from Bureau of Labor Statistics to generate price distributions for each good
     :param num_days: number of days to run simulation
@@ -136,19 +136,19 @@ def good_price_distr(price_summary: pd.DataFrame,good:str, num_days:int)->list[f
     """
     price_summary = price_summary.set_index("good")
     mean =price_summary.loc[good]["mean"]
-    std = price_summary.loc[good]["std"]
     real_price=price_summary.loc[good]["latest_price"]
 
     mean_delta = price_summary.loc[good]["mean_delta"]
     std_delta = price_summary.loc[good]["std_delta"]
 
-    price_list=[real_price]
+    price_list=[real_price] #start random walk from current price
+
     for i in range(1, num_days):
-        prev=price_list[i-1]
-        scale_factor=(mean-prev)/mean
+        prev=price_list[i-1] # start from previous day price
+        scale_factor=(mean-prev)/mean # trend toward mean food price
         scaled_change=mean_delta*scale_factor
-        change=np.random.normal(scaled_change,std_delta)
-        price_list.append(real_price+change)
+        change=np.random.normal(scaled_change,std_delta/2) # normal distribution centered around price change
+        price_list.append(prev+change) #calculate new price
     return price_list
 
 
@@ -169,6 +169,10 @@ def redistribute_food(food_banks: list, distance_mat: np.ndarray, prices:dict=Gl
     :param food_banks: list of food banks to redistribute food between
     :return: None
     """
+
+    for i in range(len(food_banks)):
+        for j in range(len(food_banks)):
+
 
 
 if __name__ == "__main__":
