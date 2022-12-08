@@ -29,6 +29,7 @@ STOCKPILE_RATIO=1/26 #foodbanks have 2 weeks of stored food (info from interview
 FOOD_PURCHASE_BUDGET_RATIO=0.10 #foodbanks use roughly 10% of annual budget for food purchase (info from disclosure)
 
 PACKAGED_COST_RATIO=0.95 #packaged food slightly cheaper than fresh food
+
 class Global:
   """Setters should only be used by simulation. Getters can be used by other classes.
   """
@@ -36,7 +37,7 @@ class Global:
   # we then decided on increasing that number to have less pantries and increase efficiency
   people_per_pantry = 500
   _current_day:int = 0
-  _price_inflation_pct: float  # dictionary with TYPE (str) float pairs. Set by Simulation.
+  _price_inflation_pct:float  # dictionary with TYPE (str) float pairs. Set by Simulation.
   _base_prices = { # base prices for each food type
     STP: 0,
     FFV: 0,

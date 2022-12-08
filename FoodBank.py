@@ -49,11 +49,11 @@ class FoodBank:
     for pantry in self.pantries:
       pantry_output = pantry.run_one_day()
       if pantry_output is None:
-        continue
-      waste, order, utility, tuple_served, true_order = pantry_output
+        continue # if pantry wasn't held, we skip
+      waste, _, utility, tuple_served, true_order = pantry_output
       total_utility = FoodBank.increment_utility(total_utility, utility)
       total_waste = FoodBank.increment_waste(total_waste, waste)
-      self.update_demand(order)
+      self.update_demand(true_order)
 
     self.purchase_food(budget)
 
