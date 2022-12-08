@@ -40,8 +40,8 @@ class Global:
     PFV: 0,
     FPT: 0,
     PPT: 0,
-    GAS: 0
   }
+  _base_gas_price=0
   config = {"pantry": {"set_limit": False, "use_real_demand": False}}
 
   @classmethod
