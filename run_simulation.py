@@ -4,6 +4,7 @@ from utils import *
 from FoodBank import *
 from FoodPantry import *
 from geographiclib.geodesic import Geodesic
+import matplotlib.pyplot as plt
 
 geod = Geodesic.WGS84
 
@@ -112,7 +113,7 @@ def generate_good_prices(price_summary: pd.DataFrame, num_days: int) -> dict[lis
     """
     price_dict = dict()
 
-    price_dict[GAS] = good_price_distr(price_summary, "gas", num_days)
+    price_dict["gas"] = good_price_distr(price_summary, "gas", num_days)
     price_dict[FFV] = good_price_distr(price_summary, "ffv", num_days)
     price_dict[FPT] = good_price_distr(price_summary, "meat", num_days)
     price_dict[STP] = good_price_distr(price_summary, "staples", num_days)
@@ -120,7 +121,7 @@ def generate_good_prices(price_summary: pd.DataFrame, num_days: int) -> dict[lis
     price_dict[PPT] = good_price_distr(price_summary, "meat", num_days) * PACKAGED_COST_RATIO # modify packaged price
 
     return price_dict
-def good_price_distr(price_summary: pd.DataFrame,good:str, num_days:int)->list[float]:
+def good_price_distr(price_summary: pd.DataFrame,good:str, num_days:int)->np.ndarray:
     """
     Generate price distribution
     starts at current price and performs a random walk
@@ -139,7 +140,9 @@ def good_price_distr(price_summary: pd.DataFrame,good:str, num_days:int)->list[f
     real_price=price_summary.loc[good]["latest_price"]
 
     mean_delta = price_summary.loc[good]["mean_delta"]
+    mean_delta = mean_delta/30 #monthly mean change to daily mean change
     std_delta = price_summary.loc[good]["std_delta"]
+    std_delta = std_delta/30 #monthly std to daily std
 
     price_list=[real_price] #start random walk from current price
 
@@ -149,7 +152,7 @@ def good_price_distr(price_summary: pd.DataFrame,good:str, num_days:int)->list[f
         scaled_change=mean_delta*scale_factor
         change=np.random.normal(scaled_change,std_delta/2) # normal distribution centered around price change
         price_list.append(prev+change) #calculate new price
-    return price_list
+    return np.array(price_list)
 
 
 
@@ -162,21 +165,28 @@ def tick_day(food_banks: list):
     """
 
 
-def redistribute_food(food_banks: list, distance_mat: np.ndarray, prices:dict=Global._base_prices) -> None:
+def redistribute_food(food_banks: list, distance_mat: np.ndarray, prices:dict=Global._base_prices, payment_source:str="recipient") -> None:
     """
+    Implements cr
 
+    :param prices:
+    :param payment_source:
     :param distance_mat: distance matrix between pairs of food banks
     :param food_banks: list of food banks to redistribute food between
     :return: None
     """
 
-    for i in range(len(food_banks)):
-        for j in range(len(food_banks)):
+    #for i in range(len(food_banks)):
+    #    for j in range(len(food_banks)):
+    #       for food in prices:
+
+
+
 
 
 
 if __name__ == "__main__":
-    food_banks_df = pd.read_csv("input.csv").head(5)
+    food_banks_df = pd.read_csv("input.csv").head(1)
     prices_df = pd.read_csv("price_summary.csv")
     num_days=365
     inflation_rate=1.08 # settable (to add)
@@ -192,6 +202,12 @@ if __name__ == "__main__":
     daily_donations=generate_food_distribution(food_banks_df, num_days)
     good_prices=generate_good_prices(prices_df, num_days)
 
+    for g in good_prices:
+        x=np.arange(0,num_days)
+        y=good_prices[g]
+        plt.plot(x, y)
+        plt.show()
+
     for i in range(0, num_days):
         for g in good_prices:
             Global._base_prices[g]=good_prices[g][i]
@@ -201,7 +217,7 @@ if __name__ == "__main__":
             print(daily_budget[j,i])
             print(daily_donations[j,i])
             curr.run_one_day(budget=daily_budget[j,i], food_donations=daily_donations[j,i])
-            print(curr.total_waste)
+            #print(curr.total_waste)
 
 
 
