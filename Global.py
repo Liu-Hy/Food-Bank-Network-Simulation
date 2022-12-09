@@ -39,7 +39,7 @@ class Global:
   """
   # we originally estimated this number from real data of the Eastern Illinois Food Bank
   # we then decided on increasing that number to have less pantries and increase efficiency
-  people_per_pantry = 500
+  households_per_pantry = 500
   _current_day:int = 0
   _price_inflation_pct:float  # dictionary with TYPE (str) float pairs. Set by Simulation.
   _base_prices = { # base prices for each food type
@@ -50,38 +50,44 @@ class Global:
     PPT: 0,
   }
   _base_gas_price=0
-  config = {"pantry": {"set_limit": False, "use_real_demand": False}}
+  config = {
+    "pantry": {"set_limit": False, "use_real_demand": False}
+  }
 
   @classmethod
-  def add_day(self):
+  def add_day(cls):
     """Updates current day, only to be used by simulation.
     """
-    self._current_day += 1
+    cls._current_day += 1
 
   @classmethod
-  def get_day(self):
-    return self._current_day
+  def get_food_demand_types(cls):
+    return [STP, FV, PT]
 
   @classmethod
-  def price_for(self, food_type: str):
+  def get_day(cls):
+    return cls._current_day
+
+  @classmethod
+  def price_for(cls, food_type: str):
     """Returns price for given food type
 
     :param food_type: 
     :return: 
     """
-    return self._base_prices[food_type]
+    return cls._base_prices[food_type]
 
   @classmethod
-  def get_food_types(self):
-    return self._base_prices.keys()
+  def get_food_types(cls):
+    return cls._base_prices.keys()
 
-  @property
-  def base_prices(self):
+  @classmethod
+  def base_prices(cls):
     """Applies inflation to base prices
 
     :return: base prices dictionary with inclation applied
     """
-    return { k: v * self._price_inflation_pct for k, v in self._base_prices.items() }
+    return { k: v * cls._price_inflation_pct for k, v in cls._base_prices.items() }
 
 
 if __name__ == '__main__':
