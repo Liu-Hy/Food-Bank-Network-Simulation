@@ -5,7 +5,7 @@ from typing import Dict, Tuple
 import numpy as np
 import pandas as pd
 
-# from FoodBank import FoodBank
+from FoodBank import FoodBank
 from Global import *
 from utils import Food, mod_beta_random
 
@@ -217,7 +217,7 @@ class FoodPantry:
         tot_util = pd.Series(np.zeros(self.num_households))
         for typ in [STP, FV, PT]:
             tot_util += self.utility_per_type(typ)
-        return tot_util.sum() / (self.num_people * 3)
+        return tot_util.sum() / 3 #/ (self.num_people * 3)
 
     def allocate_food(self, food, demand) -> Tuple[pd.Series, pd.DataFrame, int]:
         """Clients line up to purchase one type of food. Record their purchase and update the pantry inventory.

@@ -1,6 +1,7 @@
 from typing import List, Tuple, Dict
 import pandas as pd
 from FoodPantry import FoodPantry
+from FoodBank import FoodBank
 from Global import Global, TYPES
 from utils import Food
 import time
