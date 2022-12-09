@@ -52,8 +52,6 @@ class FoodBank:
         new_food = Food.generate_donation(food_donations)
         self.storage.add(new_food)
 
-        purchase = self.purchase_food(budget)
-
         total_utility = []
         total_waste = None
 
@@ -79,7 +77,7 @@ class FoodBank:
 
         self.update_weekly_demand(day_order_increment)
 
-        return total_waste, self.pantry_demand, sum(total_utility) / len(total_utility), None
+        return total_waste, self.pantry_demand, sum(total_utility), None
 
     @classmethod
     def refine_true_order(cls, order: Dict[str, float]) -> Dict[str, float]:
@@ -131,13 +129,16 @@ class FoodBank:
         self.storage.add(purchase)
         return sum(quantity)
 
+    def get_last_week_total_demand(self):
+        return sum([sum(day_order.values()) for day_order in self.last_week_demand])
+
     def last_week_pantry_demand_proportion(self):
         """Returns demand in proportions. Used to decide what food to buy next.
     Calculation based on last week's demand
 
     :return: demand proportions
     """
-        total = sum([sum(day_order.values()) for day_order in self.last_week_demand])
+        total = self.get_last_week_total_demand()
         pantry_demand = {}
         for demand in self.last_week_demand:
             for food, amount in demand.items():
@@ -177,7 +178,12 @@ class FoodBank:
 
 
 if __name__ == '__main__':
-    food_bank = FoodBank(10_000, 500_000)
+    food_insecure_pop = 80_000
+    initial_storage = 50_000
+    budget = 200_000
+    food_donations = 80_000
+
+    food_bank = FoodBank(food_insecure_pop, initial_storage)
     # Global.add_day()
     Global._base_prices = {
         STP: 2,
@@ -189,16 +195,22 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     utility_history = []
     bank_storage = []
-    for day in range(100):
+    demand_history = []
+    for day in range(50):
         # print('current day: ', day)
-        _, _, utility, _ = food_bank.run_one_day(10_000, 30_000)
+        _, _, utility, _ = food_bank.run_one_day(budget, food_donations)
         bank_storage.append(sum(food_bank.storage.get_quantity().values()))
         utility_history.append(utility)
+        demand_history.append(food_bank.get_last_week_total_demand())
         Global.add_day()
-    plt.plot(utility_history)
-    plt.title('Utility history')
 
-    plt.figure()
-    plt.plot(bank_storage, 'r')
-    plt.title('Bank storage history')
+    fig, ax1 = plt.subplots()
+    ax1.plot(demand_history)
+    plt.title(f'Demand history, insecure pop: {food_insecure_pop}, budget: {budget}, donations: {food_donations}')
+
+    ax2 = ax1.twinx()
+    ax2.plot(bank_storage, 'r')
+    ax2.set_label('Bank storage history')
+
+    fig.tight_layout()
     plt.show()
