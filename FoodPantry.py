@@ -382,7 +382,7 @@ if __name__ == '__main__':
     pantry = FoodPantry(None, num_households=households)
     start = time.time()
     for i in range(num_days):
-        waste, order, utility, num_served = pantry.run_one_day()
+        waste, order, utility, num_served, _ = pantry.run_one_day()
         utilities.append(utility)
         wastes.append(waste)
         served_ls.append(num_served)

@@ -1,7 +1,6 @@
 from typing import List, Tuple, Dict
 import pandas as pd
 from FoodPantry import FoodPantry
-from FoodBank import FoodBank
 from Global import Global, TYPES
 from utils import Food
 import time
@@ -25,7 +24,7 @@ class FoodBank:
         food_types = Global.get_food_types()
         self.pantry_demand = dict(zip(food_types, [0] * len(food_types)))
 
-        self._storage = Food(initial_storage)
+        self.storage = Food(initial_storage)
 
     def food_storage(self):
         """API for retreaving food storage dataframe
@@ -100,6 +99,21 @@ class FoodBank:
         for food, amount in order.items():
             self.pantry_demand[food] += amount
 
+    def get_food_quantity(self):
+        """Returns quantity of food in storage
+
+    :return:
+    """
+        return self.storage.get_quantity()
+
+    def get_food_order(self, order):
+        """Fulfills given order
+
+    :param order:
+    :return: order result
+    """
+        return self.storage.subtract(order)
+
     @classmethod
     def increment_utility(cls, total_utility: float, utility: float):
         """Increments total utility
@@ -121,9 +135,8 @@ if __name__ == '__main__':
     tot_all_served = []
     tot_partly_served = []
     start = time.time()
-    for run in range(3):
+    for run in range(10):
         Global._current_day = 0
-        print(Global.get_day())
         utilities = []
         wastes = []
         served_ls = []
@@ -134,11 +147,10 @@ if __name__ == '__main__':
         pantry_order = list(range(num_panties))
         for i in range(num_days):
             Global.add_day()
-            print(Global.get_day())
-            waste = foodbank._storage.quality_control(1)
+            waste = foodbank.storage.quality_control(1)
             wastes.append(waste)  # comment this line to trace a specific pantry
             new_food = Food.generate_donation(33333)
-            foodbank._storage.add(new_food)
+            foodbank.storage.add(new_food)
             random.shuffle(pantry_order)
             for p in pantry_order:
                 result = foodbank.pantries[p].run_one_day()
