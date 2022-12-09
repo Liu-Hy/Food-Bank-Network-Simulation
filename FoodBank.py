@@ -177,13 +177,13 @@ class FoodBank:
 
 
 if __name__ == '__main__':
-    food_bank = FoodBank(80_000, 500_000)
+    food_bank = FoodBank(10_000, 500_000)
     # Global.add_day()
     Global._base_prices = {
         STP: 2,
-        FFV: 3,
+        FFV: 1,
         PFV: 2,
-        FPT: 2,
+        FPT: 1,
         PPT: 2,
     }
     import matplotlib.pyplot as plt
@@ -191,14 +191,14 @@ if __name__ == '__main__':
     bank_storage = []
     for day in range(100):
         # print('current day: ', day)
-        _, _, utility, _ = food_bank.run_one_day(10000, 100)
+        _, _, utility, _ = food_bank.run_one_day(10_000, 30_000)
         bank_storage.append(sum(food_bank.storage.get_quantity().values()))
         utility_history.append(utility)
         Global.add_day()
     plt.plot(utility_history)
     plt.title('Utility history')
-    plt.figure()
 
+    plt.figure()
     plt.plot(bank_storage, 'r')
     plt.title('Bank storage history')
     plt.show()
