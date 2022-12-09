@@ -52,7 +52,7 @@ class FoodBank:
         new_food = Food.generate_donation(food_donations)
         self.storage.add(new_food)
 
-        self.purchase_food(budget)
+        purchase = self.purchase_food(budget)
 
         total_utility = []
         total_waste = None
@@ -125,10 +125,11 @@ class FoodBank:
         demand = self.last_week_pantry_demand_proportion()
         types = demand.keys()
         remaining_days = [TYPES[t]['max_days'] for t in types]
-        quantity = [demand[t] * budget * Global._base_prices[t] for t in types]
+        quantity = [demand[t] * budget / Global.price_for(t) for t in types]
 
         purchase = pd.DataFrame({"type": types, "remaining_days": remaining_days, "quantity": quantity})
         self.storage.add(purchase)
+        return sum(quantity)
 
     def last_week_pantry_demand_proportion(self):
         """Returns demand in proportions. Used to decide what food to buy next.
@@ -137,7 +138,14 @@ class FoodBank:
     :return: demand proportions
     """
         total = sum([sum(day_order.values()) for day_order in self.last_week_demand])
-        return {food: 1 / len(Global.get_food_types()) if total == 0 else (amount / total) for (food, amount) in self.pantry_demand.items()}
+        pantry_demand = {}
+        for demand in self.last_week_demand:
+            for food, amount in demand.items():
+                if food not in pantry_demand:
+                    pantry_demand[food] = amount
+                    continue
+                pantry_demand[food] += amount
+        return {food: 1 / len(Global.get_food_types()) if total == 0 else (amount / total) for (food, amount) in pantry_demand.items()}
 
     def update_demand(self, order):
         """Updates pantry demand values
