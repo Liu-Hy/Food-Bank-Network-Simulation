@@ -1,3 +1,5 @@
+import numpy as np
+
 STP = "staples"
 FFV = "fresh_fruits_and_vegetables"
 PFV = "packaged_fruits_and_vegetables"
@@ -7,6 +9,8 @@ GAS = "gas_price"
 
 FV = "fruits_and_vegetables"
 PT = "protein"
+
+rng = np.random.default_rng()
 
 """Only PERSON_WEEKLY_DEMAND and FAMILY-DISTRIBUTION are accurate. Others are fabricated. """
 TYPES = {STP: {"proportion": 0.3, "max_days": 180},

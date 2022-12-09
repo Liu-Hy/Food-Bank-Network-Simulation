@@ -9,7 +9,6 @@ import pandas as pd
 from Global import *
 from utils import Food, mod_beta_random
 
-rng = np.random.default_rng()
 
 
 class FoodPantry:
