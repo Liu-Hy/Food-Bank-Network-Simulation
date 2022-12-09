@@ -42,8 +42,7 @@ class FoodBank:
     """
         return self.storage.df.copy()
 
-    def run_one_day(self, budget: float, food_donations: float) -> tuple[dict | None | Any, dict[
-        Any, int], int | float, None] | tuple[dict | None | Any, dict[Any, int], int | float, tuple[int, int]]:
+    def run_one_day(self, budget: float, food_donations: float):
         """Runs simulation for the day. Also calls `run_one_day` for each pantry it serves.
 
     :param budget: Budget for the day
@@ -53,13 +52,14 @@ class FoodBank:
         new_food = Food.generate_donation(food_donations)
         self.storage.add(new_food)
 
-        total_utility = 0
+        self.purchase_food(budget)
+
+        total_utility = []
         total_waste = None
 
         day_order_increment = None
 
         pantries_run = False
-
 
         for pantry in self.pantries:
             pantry_output = pantry.run_one_day()
@@ -67,20 +67,19 @@ class FoodBank:
                 continue  # if pantry wasn't held, we skip
             pantries_run = True
             waste, _, utility, _, true_order = pantry_output
-            total_utility = FoodBank.increment_utility(total_utility, utility)
+            total_utility.append(utility)
+            # total_utility = FoodBank.increment_utility(total_utility, utility)
             total_waste = FoodBank.increment_food_dict(total_waste, waste)
             refined_true_order = self.refine_true_order(true_order)
             day_order_increment = FoodBank.increment_food_dict(day_order_increment, refined_true_order)
             self.update_demand(refined_true_order)
 
         if not pantries_run:
-            return total_waste, self.pantry_demand, total_utility, None
+            return total_waste, self.pantry_demand, 0, None
 
         self.update_weekly_demand(day_order_increment)
 
-        self.purchase_food(budget)
-
-        return total_waste, self.pantry_demand, total_utility, None
+        return total_waste, self.pantry_demand, sum(total_utility) / len(total_utility), None
 
     @classmethod
     def refine_true_order(cls, order: Dict[str, float]) -> Dict[str, float]:
@@ -138,7 +137,7 @@ class FoodBank:
     :return: demand proportions
     """
         total = sum([sum(day_order.values()) for day_order in self.last_week_demand])
-        return {food: 0 if total == 0 else (amount / total) for (food, amount) in self.pantry_demand.items()}
+        return {food: 1 / len(Global.get_food_types()) if total == 0 else (amount / total) for (food, amount) in self.pantry_demand.items()}
 
     def update_demand(self, order):
         """Updates pantry demand values
@@ -170,7 +169,7 @@ class FoodBank:
 
 
 if __name__ == '__main__':
-    food_bank = FoodBank(10_000, 1000)
+    food_bank = FoodBank(80_000, 500_000)
     # Global.add_day()
     Global._base_prices = {
         STP: 2,
@@ -179,8 +178,19 @@ if __name__ == '__main__':
         FPT: 2,
         PPT: 2,
     }
-    for day in range(50):
-        food_bank.run_one_day(1000, 100)
-        food_bank
+    import matplotlib.pyplot as plt
+    utility_history = []
+    bank_storage = []
+    for day in range(100):
+        # print('current day: ', day)
+        _, _, utility, _ = food_bank.run_one_day(10000, 100)
+        bank_storage.append(sum(food_bank.storage.get_quantity().values()))
+        utility_history.append(utility)
         Global.add_day()
-    food_bank
+    plt.plot(utility_history)
+    plt.title('Utility history')
+    plt.figure()
+
+    plt.plot(bank_storage, 'r')
+    plt.title('Bank storage history')
+    plt.show()
