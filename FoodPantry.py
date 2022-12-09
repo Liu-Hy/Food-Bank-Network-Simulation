@@ -63,10 +63,9 @@ class FoodPantry:
                    (FV, "purchased_fresh"), (FV, "purchased_packaged"),
                    (PT, "total"), (PT, "base_secured"), (PT, "secured"), (PT, "demand"), (PT, "demand_alt"),
                    (PT, "purchased_fresh"), (PT, "purchased_packaged")]
-        clients = pd.DataFrame(columns=pd.MultiIndex.from_tuples(columns))
+        clients = pd.DataFrame(columns=pd.MultiIndex.from_tuples(columns)).astype("float")
         clients[("num_people", "")] = rng.choice(range(1, 11), self.num_households, p=FAMILY_DISTRIBUTION)
-        #clients.loc[:, (slice(None), "base_secured")] = rng.uniform(0.3, 0.9, (self.num_households, 3))
-        clients.loc[:, clients.columns.get_level_values(1) == "base_secured"] = rng.uniform(0.3, 0.9, (self.num_households, 3))
+        clients.loc[:, (slice(None), "base_secured")] = rng.uniform(0.3, 0.9, (self.num_households, 3))
         for typ, stat in PERSONAL_WEEKLY_DEMAND.items():
             mean, std = stat["mean"], stat["std"]
             low, high = 0.5 * mean, 2 * mean
@@ -95,9 +94,7 @@ class FoodPantry:
             if "demand_alt" in self.clients[typ]:
                 self.clients[(typ, "demand_alt")] = 0.
         # remove the purchase record of the previous week
-        #self.clients.loc[:, (slice(None), ["purchased", "purchased_fresh", "purchased_packaged"])] = 0.
-        self.clients.loc[:, self.clients.columns.get_level_values(1).isin(["purchased", "purchased_fresh", "purchased_packaged"])] \
-            = rng.uniform(0.3, 0.9, (self.num_households, 5))
+        self.clients.loc[:, (slice(None), ["purchased", "purchased_fresh", "purchased_packaged"])] = 0.
 
     def estimate_demand(self) -> Dict[str, float]:
         """Predict client demand this week based on prior experience
