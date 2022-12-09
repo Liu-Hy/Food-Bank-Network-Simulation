@@ -42,8 +42,8 @@ class FoodBank:
     """
         return self.storage.df.copy()
 
-    def run_one_day(self, budget: float, food_donations: float) -> tuple[
-      dict | None | Any, dict[Any, int], int | float, tuple[int, int]]:
+    def run_one_day(self, budget: float, food_donations: float) -> tuple[dict | None | Any, dict[
+        Any, int], int | float, None] | tuple[dict | None | Any, dict[Any, int], int | float, tuple[int, int]]:
         """Runs simulation for the day. Also calls `run_one_day` for each pantry it serves.
 
     :param budget: Budget for the day
@@ -57,21 +57,45 @@ class FoodBank:
         total_waste = None
 
         day_order_increment = None
+
+        pantries_run = False
+
+
         for pantry in self.pantries:
             pantry_output = pantry.run_one_day()
             if pantry_output is None:
                 continue  # if pantry wasn't held, we skip
-            waste, _, utility, tuple_served, true_order = pantry_output
+            pantries_run = True
+            waste, _, utility, _, true_order = pantry_output
             total_utility = FoodBank.increment_utility(total_utility, utility)
             total_waste = FoodBank.increment_food_dict(total_waste, waste)
-            day_order_increment = FoodBank.increment_food_dict(day_order_increment, true_order)
-            self.update_demand(true_order)
+            refined_true_order = self.refine_true_order(true_order)
+            day_order_increment = FoodBank.increment_food_dict(day_order_increment, refined_true_order)
+            self.update_demand(refined_true_order)
+
+        if not pantries_run:
+            return total_waste, self.pantry_demand, total_utility, None
 
         self.update_weekly_demand(day_order_increment)
 
         self.purchase_food(budget)
 
-        return total_waste, self.pantry_demand, total_utility, tuple_served
+        return total_waste, self.pantry_demand, total_utility, None
+
+    @classmethod
+    def refine_true_order(cls, order: Dict[str, float]) -> Dict[str, float]:
+        return {STP: order[STP],
+                FFV: (FoodBank.price_demand_choice(order, FFV, PFV, FV))[0],
+                PFV: (FoodBank.price_demand_choice(order, FFV, PFV, FV))[1],
+                FPT: (FoodBank.price_demand_choice(order, FPT, PPT, PT))[0],
+                PPT: (FoodBank.price_demand_choice(order, FPT, PPT, PT))[1]}
+
+    @classmethod
+    def price_demand_choice(cls, order: Dict[str, float], food_a: str, food_b: str, food_type: str):
+        if Global.price_for(food_a) < Global.price_for(food_b):
+            return order[food_type], 0
+
+        return 0, order[food_type]
 
     def get_food_quantity(self):
         """Returns quantity of food in storage
@@ -89,10 +113,10 @@ class FoodBank:
         return self.storage.subtract(order)
 
     @classmethod
-    def increment_food_dict(total_food_dict, new_food_dict):
+    def increment_food_dict(cls, total_food_dict, new_food_dict):
         if total_food_dict is None:
             return new_food_dict
-        return {food: (total_food_dict[food] + food_dict) for food, food_dict in new_food_dict}
+        return {food: (total_food_dict[food] + food_amount) for food, food_amount in new_food_dict.items()}
 
     def purchase_food(self, budget: float):
         """Purchases food using given budget
@@ -114,7 +138,7 @@ class FoodBank:
     :return: demand proportions
     """
         total = sum([sum(day_order.values()) for day_order in self.last_week_demand])
-        return {food: (amount / total) for (food, amount) in self.pantry_demand.items()}
+        return {food: 0 if total == 0 else (amount / total) for (food, amount) in self.pantry_demand.items()}
 
     def update_demand(self, order):
         """Updates pantry demand values
@@ -125,19 +149,19 @@ class FoodBank:
             self.pantry_demand[food] += amount
 
     def update_weekly_demand(self, order):
+        if order is None:
+            return
         if len(self.last_week_demand) >= 7:
             self.last_week_demand.pop(0)
         self.last_week_demand.append(order)
 
     @classmethod
-    def increment_utility(self, total_utility: float, utility: float):
+    def increment_utility(cls, total_utility: float, utility: float):
         """Increments total utility
 
     :param total_utility: 
     :param utility: 
     :return: new total utility
-    >>> FoodBank(0, 0).increment_utility(10)
-    10
     """
         if total_utility is None:
             return utility
@@ -156,6 +180,7 @@ if __name__ == '__main__':
         PPT: 2,
     }
     for day in range(50):
-        food_bank.run_one_day(1000, 10)
+        food_bank.run_one_day(1000, 100)
         food_bank
         Global.add_day()
+    food_bank
