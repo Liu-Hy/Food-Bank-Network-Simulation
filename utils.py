@@ -273,6 +273,14 @@ class Food:
         self.df = self.df.set_index(["type", "remaining_days"]).add(other.set_index(["type", "remaining_days"]),
                                                                     fill_value=0).reset_index()
 
+    def get_quantity_by_food(self):
+        """Returns storages for each type in weight units
+        """
+        storage_amounts = {}
+        for food_type in Global.get_food_types():
+            storage_amounts[food_type] = [self.df[self.df['type'] == food_type]['quantity'].sum()]
+        return pd.DataFrame(storage_amounts)
+
     def subtract(self, order: Dict[str, float], inplace=True):
         """
         Subtract some quantity of food from stock, and return the Food object with that quantity.

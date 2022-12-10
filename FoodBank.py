@@ -62,7 +62,7 @@ class FoodBank:
         return self.storage.df.copy()
 
     def storage_quantities_by_type(self):
-        return self.storage.get_quantity()
+        return self.storage.get_quantity_by_food()
 
     def run_one_day(self, budget: float, food_donations: float):
         """Runs simulation for the day. Also calls `run_one_day` for each pantry it serves.
