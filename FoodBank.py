@@ -62,7 +62,7 @@ class FoodBank:
         return self.storage.df.copy()
 
     def storage_quantities_by_type(self):
-        return self.storage.get_quantity_by_food()
+        return self.storage.get_quantity()
 
     def run_one_day(self, budget: float, food_donations: float):
         """Runs simulation for the day. Also calls `run_one_day` for each pantry it serves.
@@ -72,7 +72,10 @@ class FoodBank:
         """
         self.purchase_food(budget)
         new_food = Food.generate_donation(food_donations)
+
         self.storage.add(new_food)
+
+        self.storage.quality_control()
 
         total_utility = []
         total_waste = None
@@ -139,7 +142,7 @@ class FoodBank:
         """Purchases food using given budget
         :param budget: budget in dollars
         """
-        demand = self.last_week_pantry_demand_proportion()
+        demand = self.last_week_demand_proportion()
         types = demand.keys()
         remaining_days = [TYPES[t]['max_days'] for t in types]
         quantity = [demand[t] * budget / Global.price_for(t) for t in types]
@@ -148,15 +151,10 @@ class FoodBank:
         self.storage.add(self.last_purchase)
         return sum(quantity)
 
-    def get_last_week_total_demand(self):
+    def last_week_total_demand(self) -> float:
         return sum([sum(day_order.values()) for day_order in self.last_week_demand])
 
-    def last_week_pantry_demand_proportion(self):
-        """Returns demand in proportions. Used to decide what food to buy next.
-        Calculation based on last week's demand
-        :return: demand proportions
-        """
-        total = self.get_last_week_total_demand()
+    def last_week_aggregate_demand(self) -> Dict[str, float]:
         pantry_demand = {}
         for demand in self.last_week_demand:
             for food, amount in demand.items():
@@ -164,7 +162,18 @@ class FoodBank:
                     pantry_demand[food] = amount
                     continue
                 pantry_demand[food] += amount
-        return {food: 1 / len(Global.get_food_types()) if total == 0 else (amount / total) for (food, amount) in pantry_demand.items()}
+        return pantry_demand
+
+    def last_week_demand_proportion(self):
+        """Returns demand in proportions. Used to decide what food to buy next.
+        Calculation based on last week's demand
+        :return: demand proportions
+        """
+        total = self.last_week_total_demand()
+        if total == 0:
+            return {food: 1 / len(Global.get_food_types()) for food in TYPES.keys()}
+        pantry_demand = self.last_week_aggregate_demand()
+        return {food: (amount / total) for (food, amount) in pantry_demand.items()}
 
     def update_demand(self, order):
         """Updates pantry demand values
@@ -218,7 +227,7 @@ if __name__ == '__main__':
         _, _, utility, _ = food_bank.run_one_day(budget, food_donations)
         bank_storage.append(sum(food_bank.storage.get_quantity().values()))
         utility_history.append(utility)
-        demand_history.append(food_bank.get_last_week_total_demand())
+        demand_history.append(food_bank.last_week_total_demand())
 
         if quantity_by_food is None:
             quantity_by_food = food_bank.storage_quantities_by_type()
