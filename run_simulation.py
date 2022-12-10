@@ -144,13 +144,14 @@ def good_price_distr(price_summary: pd.DataFrame,good:str, num_days:int)->np.nda
     std_delta = price_summary.loc[good]["std_delta"]
     std_delta = std_delta/30 #monthly std to daily std
 
-    price_list=[real_price] #start random walk from current price
+    price_list=[mean] #start random walk from historical mean
 
     for i in range(1, num_days):
         prev=price_list[i-1] # start from previous day price
         scale_factor=(mean-prev)/mean # trend toward mean food price
         scaled_change=mean_delta*scale_factor
-        change=np.random.normal(scaled_change,std_delta/2) # normal distribution centered around price change
+        print(scaled_change)
+        change=np.random.normal(scaled_change,std_delta) # normal distribution centered around price change
         price_list.append(prev+change) #calculate new price
     return np.array(price_list)
 
@@ -176,10 +177,11 @@ def redistribute_food(food_banks: list, distance_mat: np.ndarray, prices:dict=Gl
     :return: None
     """
 
-    #for i in range(len(food_banks)):
-    #    for j in range(len(food_banks)):
-    #       for food in prices:
 
+    for i in range(len(food_banks)):
+        for j in range(len(food_banks)):
+           for food in food_goods:
+                Global.price_for(food)
 
 
 
@@ -210,7 +212,7 @@ if __name__ == "__main__":
 
     for i in range(0, num_days):
         for g in good_prices:
-            Global._base_prices[g]=good_prices[g][i]
+            Global.set_price(g,good_prices[g][i])
 
         for j in range(0, len(food_banks)):
             curr=food_banks[j]
