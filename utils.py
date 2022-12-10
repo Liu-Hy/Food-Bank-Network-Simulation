@@ -273,11 +273,11 @@ class Food:
         self.df = self.df.set_index(["type", "remaining_days"]).add(other.set_index(["type", "remaining_days"]),
                                                                     fill_value=0).reset_index()
 
-    def subtract(self, order: Dict[str, float], inplace=True):
+    def subtract(self, order: Dict[str, float], predict=False):
         """
         Subtract some quantity of food from stock, and return the Food object with that quantity.
         :param order: a dictionary storing the ordered food in each category
-        :param inplace: Whether to change self.df in place. Set to False to preview food shortage in the next few days
+        :param predict: Set to True to preview food shortage in the next few days.
         :return:
         >>> food = Food(5000)
         >>> q = food.get_quantity()
@@ -302,7 +302,7 @@ class Food:
         <BLANKLINE>
         [180 rows x 3 columns]
         >>> food2 = Food(5000)
-        >>> sent2, stock2 = food2.subtract({STP: 30.0, FPT: 22.0}, inplace=False)
+        >>> sent2, stock2 = food2.subtract({STP: 30.0, FPT: 22.0}, predict=True)
         >>> sent2.sort_by_freshness()
         >>> sent2.df[sent2.df["type"] == STP].round(3)
               type  remaining_days  quantity
@@ -327,15 +327,40 @@ class Food:
         ValueError: The "staples" you ordered does not exist or is not sufficient in stock
         >>> food3.df["quantity"].sum() == 5000  # Subtraction failed, stock remains the same
         True
+        >>> food4 = Food(5000)
+        >>> order4 = {k: v+7 for k, v in q.items()}
+        >>> sent4, stock4 = food4.subtract(order4, predict=True)
+        >>> sent4.df.round(3)  # doctest: +ELLIPSIS
+                                    type  remaining_days  quantity
+        0    fresh_fruits_and_vegetables               1    35.714
+        1    fresh_fruits_and_vegetables               2    35.714
+        ...
+        742                      staples             179     8.333
+        743                      staples             180     8.333
+        <BLANKLINE>
+        [744 rows x 3 columns]
+        >>> stock4.df.round(3)
+                                     type  remaining_days  quantity
+        0     fresh_fruits_and_vegetables              14      -7.0
+        1                   fresh_protein              10      -7.0
+        2  packaged_fruits_and_vegetables             360      -7.0
+        3                packaged_protein             180      -7.0
+        4                         staples             180      -7.0
         """
         quantity = self.get_quantity()
         self.sort_by_freshness(reverse=True)
 
+        shortage = dict()
         for typ in TYPES.keys():
             if (typ not in order) or (order[typ] <= 0):
                 order[typ] = 0.
             elif (typ not in quantity) or (order[typ] > quantity[typ]):
-                raise ValueError(f"The \"{typ}\" you ordered does not exist or is not sufficient in stock")
+                if predict:
+                    available = quantity.get(typ, 0)
+                    shortage[typ] = order[typ] - available
+                    order[typ] = available
+                else:
+                    raise ValueError(f"The \"{typ}\" you ordered does not exist or is not sufficient in stock")
 
         order = pd.DataFrame(order.items(), columns=["type", "demand"])
         stock = self.df.copy()
@@ -356,8 +381,12 @@ class Food:
                                                              sent.loc[sent.index == sent["pivot"], "demand"]
         sent = sent[["type", "remaining_days", "quantity"]].reset_index(drop=True)
         stock = stock[["type", "remaining_days", "quantity"]].reset_index(drop=True)
-        if inplace:
+        if len(shortage) > 0:
+            for typ, qt in shortage.items():
+                assert len(stock[stock["type"] == typ]) == 1
+                stock.loc[stock["type"] == typ, "quantity"] -= qt
+        if predict:
+            return Food(sent), Food(stock)
+        else:
             self.df = stock
             return Food(sent)
-        else:
-            return Food(sent), Food(stock)
