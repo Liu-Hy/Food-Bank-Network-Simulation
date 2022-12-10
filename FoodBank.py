@@ -9,11 +9,10 @@ class FoodBank:
     def __init__(self, food_insecure_pop: int, initial_storage: float,
                  households_per_pantry: int = Global.households_per_pantry):
         """Food bank constructor. Modify `food_insecure_pop` and `households_per_pantry` to simulate crisis.
-
-    :param food_insecure_pop: Number of food insecure people. Used to estimate number of pantries
-    :param initial_storage: Initial storage of food in pounds. Value given to Food class
-    :param households_per_pantry: default to global number
-    """
+        :param food_insecure_pop: Number of food insecure people. Used to estimate number of pantries
+        :param initial_storage: Initial storage of food in pounds. Value given to Food class
+        :param households_per_pantry: default to global number
+        """
         # we assume half of the food insecure people actually use the bank
         num_pantries = int(.5 * food_insecure_pop / households_per_pantry)
         self.pantries: List[FoodPantry] = [FoodPantry(self, num_households=households_per_pantry) for _ in
@@ -26,6 +25,8 @@ class FoodBank:
 
         self.last_week_demand: List[Dict[str, int]] = []
 
+        self.last_purchase = None
+
     def next_week_demand_estimate(self):
 
         pass
@@ -37,18 +38,20 @@ class FoodBank:
 
     def food_storage(self):
         """API for retreaving food storage dataframe
-
-    :return: storage dataframe
-    """
+        :return: storage dataframe
+        """
         return self.storage.df.copy()
+
+    def storage_quantities_by_type(self):
+        return self.storage.get_quantity_by_food()
 
     def run_one_day(self, budget: float, food_donations: float):
         """Runs simulation for the day. Also calls `run_one_day` for each pantry it serves.
-
-    :param budget: Budget for the day
-    :param food_donations: Food donations in pounds of food
-    :return: Overall waste, demand (based on orders) and utility of all pantries
-    """
+        :param budget: Budget for the day
+        :param food_donations: Food donations in pounds of food
+        :return: Overall waste, demand (based on orders) and utility of all pantries
+        """
+        self.purchase_food(budget)
         new_food = Food.generate_donation(food_donations)
         self.storage.add(new_food)
 
@@ -96,17 +99,15 @@ class FoodBank:
 
     def get_food_quantity(self):
         """Returns quantity of food in storage
-
-    :return:
-    """
+        :return:
+        """
         return self.storage.get_quantity()
 
     def get_food_order(self, order):
         """Fulfills given order
-
-    :param order: 
-    :return: order result
-    """
+        :param order: 
+        :return: order result
+        """
         return self.storage.subtract(order)
 
     @classmethod
@@ -117,16 +118,15 @@ class FoodBank:
 
     def purchase_food(self, budget: float):
         """Purchases food using given budget
-
-    :param budget: budget in dollars
-    """
+        :param budget: budget in dollars
+        """
         demand = self.last_week_pantry_demand_proportion()
         types = demand.keys()
         remaining_days = [TYPES[t]['max_days'] for t in types]
         quantity = [demand[t] * budget / Global.price_for(t) for t in types]
 
-        purchase = pd.DataFrame({"type": types, "remaining_days": remaining_days, "quantity": quantity})
-        self.storage.add(purchase)
+        self.last_purchase = pd.DataFrame({"type": types, "remaining_days": remaining_days, "quantity": quantity})
+        self.storage.add(self.last_purchase)
         return sum(quantity)
 
     def get_last_week_total_demand(self):
@@ -134,10 +134,9 @@ class FoodBank:
 
     def last_week_pantry_demand_proportion(self):
         """Returns demand in proportions. Used to decide what food to buy next.
-    Calculation based on last week's demand
-
-    :return: demand proportions
-    """
+        Calculation based on last week's demand
+        :return: demand proportions
+        """
         total = self.get_last_week_total_demand()
         pantry_demand = {}
         for demand in self.last_week_demand:
@@ -150,9 +149,8 @@ class FoodBank:
 
     def update_demand(self, order):
         """Updates pantry demand values
-
-    :param order: order made by a pantry
-    """
+        :param order: order made by a pantry
+        """
         for food, amount in order.items():
             self.pantry_demand[food] += amount
 
@@ -166,11 +164,10 @@ class FoodBank:
     @classmethod
     def increment_utility(cls, total_utility: float, utility: float):
         """Increments total utility
-
-    :param total_utility: 
-    :param utility: 
-    :return: new total utility
-    """
+        :param total_utility: 
+        :param utility: 
+        :return: new total utility
+        """
         if total_utility is None:
             return utility
         else:
