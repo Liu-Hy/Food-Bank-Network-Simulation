@@ -175,39 +175,46 @@ class FoodBank:
 
 
 if __name__ == '__main__':
-    food_insecure_pop = 80_000
+    food_insecure_pop = 30_000
     initial_storage = 50_000
-    budget = 200_000
-    food_donations = 80_000
+    budget = 40_000
+    food_donations = 30_000
 
     food_bank = FoodBank(food_insecure_pop, initial_storage)
     # Global.add_day()
     Global._base_prices = {
         STP: 2,
-        FFV: 1,
+        FFV: 3,
         PFV: 2,
-        FPT: 1,
+        FPT: 3,
         PPT: 2,
     }
     import matplotlib.pyplot as plt
     utility_history = []
     bank_storage = []
     demand_history = []
+    quantity_by_food = None
     for day in range(50):
         # print('current day: ', day)
         _, _, utility, _ = food_bank.run_one_day(budget, food_donations)
         bank_storage.append(sum(food_bank.storage.get_quantity().values()))
         utility_history.append(utility)
         demand_history.append(food_bank.get_last_week_total_demand())
+
+        if quantity_by_food is None:
+            quantity_by_food = food_bank.storage_quantities_by_type()
+        else:
+            quantity_by_food = pd.concat([quantity_by_food, food_bank.storage_quantities_by_type()], ignore_index=True)
+        
         Global.add_day()
 
-    fig, ax1 = plt.subplots()
-    ax1.plot(demand_history)
-    plt.title(f'Demand history, insecure pop: {food_insecure_pop}, budget: {budget}, donations: {food_donations}')
+    plt.figure()
+    plt.plot(utility_history, label='utility')
+    plt.title('Utility')
 
-    ax2 = ax1.twinx()
-    ax2.plot(bank_storage, 'r')
-    ax2.set_label('Bank storage history')
+    plt.figure()
+    plt.plot(bank_storage, label='bank storage')
+    plt.title('Bank storage')
 
-    fig.tight_layout()
+    quantity_by_food.plot()
     plt.show()
