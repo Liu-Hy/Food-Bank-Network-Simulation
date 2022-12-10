@@ -7,6 +7,8 @@ FPT = "fresh_protein"
 PPT = "packaged_protein"
 GAS = "gas_price"
 
+food_goods = [STP, FFV, PFV, FPT, PPT]
+
 FV = "fruits_and_vegetables"
 PT = "protein"
 
@@ -28,71 +30,82 @@ FAMILY_DISTRIBUTION = [0.2845, 0.3503, 0.1503, 0.1239, 0.0583, 0.0203] + ([0.003
 
 ELASTICITY = {STP: -0.3, FV: -0.5, PT: -0.6}
 
-STOCKPILE_RATIO=1/26 #foodbanks have 2 weeks of stored food (info from interview)
+STOCKPILE_RATIO = 1 / 26  # foodbanks have 2 weeks of stored food (info from interview)
 
-FOOD_PURCHASE_BUDGET_RATIO=0.10 #foodbanks use roughly 10% of annual budget for food purchase (info from disclosure)
+FOOD_PURCHASE_BUDGET_RATIO = 0.10  # foodbanks use roughly 10% of annual budget for food purchase (info from disclosure)
 
-PACKAGED_COST_RATIO=0.95 #packaged food slightly cheaper than fresh food
+PACKAGED_COST_RATIO = 0.95  # packaged food slightly cheaper than fresh food
+
 
 class Global:
-  """Setters should only be used by simulation. Getters can be used by other classes.
+    """Setters should only be used by simulation. Getters can be used by other classes.
   """
-  # we originally estimated this number from real data of the Eastern Illinois Food Bank
-  # we then decided on increasing that number to have less pantries and increase efficiency
-  households_per_pantry = 500
-  _current_day:int = 0
-  _price_inflation_pct:float  # dictionary with TYPE (str) float pairs. Set by Simulation.
-  _base_prices = { # base prices for each food type
-    STP: 0,
-    FFV: 0,
-    PFV: 0,
-    FPT: 0,
-    PPT: 0,
-  }
-  _base_gas_price=0
-  config = {
-    "pantry": {"set_limit": False, "use_real_demand": False}
-  }
+    # we originally estimated this number from real data of the Eastern Illinois Food Bank
+    # we then decided on increasing that number to have less pantries and increase efficiency
+    households_per_pantry = 500
+    _current_day: int = 0
+    _price_inflation_pct: float  # dictionary with TYPE (str) float pairs. Set by Simulation.
+    _base_prices = {  # base prices for each food type
+        STP: 0,
+        FFV: 0,
+        PFV: 0,
+        FPT: 0,
+        PPT: 0,
+        GAS: 0
+    }
+    config = {
+        "pantry": {"set_limit": False, "use_real_demand": False}
+    }
 
-  @classmethod
-  def add_day(cls):
-    """Updates current day, only to be used by simulation.
+    @classmethod
+    def set_price(cls, good_type: str, price: float):
+        """
+    sets price for food, used by simulation
+    :param good_type: string name of food type
+    :param price: float price
+    :return: None
     """
-    cls._current_day += 1
+        cls._base_prices[good_type] = price
 
-  @classmethod
-  def get_food_demand_types(cls):
-    return [STP, FV, PT]
+    @classmethod
+    def add_day(cls):
+        """Updates current day, only to be used by simulation.
+    """
+        cls._current_day += 1
 
-  @classmethod
-  def get_day(cls):
-    return cls._current_day
+    @classmethod
+    def get_food_demand_types(cls):
+        return [STP, FV, PT]
 
-  @classmethod
-  def price_for(cls, food_type: str):
-    """Returns price for given food type
+    @classmethod
+    def get_day(cls):
+        return cls._current_day
+
+    @classmethod
+    def price_for(cls, food_type: str):
+        """Returns price for given food type
 
     :param food_type: 
     :return: 
     """
-    return cls._base_prices[food_type]
+        return cls._base_prices[food_type]
 
-  @classmethod
-  def get_food_types(cls):
-    return cls._base_prices.keys()
+    @classmethod
+    def get_food_types(cls):
+        return cls._base_prices.keys()
 
-  @classmethod
-  def base_prices(cls):
-    """Applies inflation to base prices
+    @classmethod
+    def base_prices(cls):
+        """Applies inflation to base prices
 
     :return: base prices dictionary with inclation applied
     """
-    return { k: v * cls._price_inflation_pct for k, v in cls._base_prices.items() }
+        return {k: v * cls._price_inflation_pct for k, v in cls._base_prices.items()}
 
 
 if __name__ == '__main__':
-  print(Global.get_day())
-  print(Global.add_day())
-  print(Global.get_day())
+    print(Global.get_day())
+    print(Global.add_day())
+    print(Global.get_day())
 
-  print(Global.get_food_types())
+    print(Global.get_food_types())
