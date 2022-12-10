@@ -9,11 +9,10 @@ class FoodBank:
     def __init__(self, food_insecure_pop: int, initial_storage: float,
                  households_per_pantry: int = Global.households_per_pantry):
         """Food bank constructor. Modify `food_insecure_pop` and `households_per_pantry` to simulate crisis.
-
-    :param food_insecure_pop: Number of food insecure people. Used to estimate number of pantries
-    :param initial_storage: Initial storage of food in pounds. Value given to Food class
-    :param households_per_pantry: default to global number
-    """
+        :param food_insecure_pop: Number of food insecure people. Used to estimate number of pantries
+        :param initial_storage: Initial storage of food in pounds. Value given to Food class
+        :param households_per_pantry: default to global number
+        """
         # we assume half of the food insecure people actually use the bank
         num_pantries = int(.5 * food_insecure_pop / households_per_pantry)
         self.pantries: List[FoodPantry] = [FoodPantry(self, num_households=households_per_pantry) for _ in
@@ -26,10 +25,31 @@ class FoodBank:
 
         self.last_week_demand: List[Dict[str, int]] = []
 
-    def next_week_demand_estimate(self):
+        self.last_purchase = None
 
-        pass
+    def next_week_storage_estimate(self):
+        """Next week's storage considering last week's demand
+        """
+        _, future_storage = self.storage.subtract(self.last_week_aggregate_demand(), inplace=False)
+        return future_storage
 
+    def food_going_bad(self) -> Food:
+        """Returns Food instance with food going bad considering current demand
+        :return: Food instance with all the food that is going bad within next week considering current demand
+        """
+        # what future stock will look like considering last week's demand
+        future_storage = self.next_week_storage_estimate()
+        return future_storage[future_storage['remaining_days'] <= 7]
+    
+    def extract_food_from_storage(self, food: Food):
+        """Used by simulation to extract food to be sent to other food banks
+        :param food: `Food` instace that is the output of this bank's own `food_going_bad`
+        """
+        self.storage.subtract(food.get_quantity())
+
+    def future_unmet_demand(self):
+        future_storage = self.next_week_storage_estimate()
+        return future_storage[future_storage['quantity'] < 0]
     # food that will be going bad soon with current level of demand
     # projection of how much will be ordered
     # food in demand with not enough supply
@@ -37,20 +57,25 @@ class FoodBank:
 
     def food_storage(self):
         """API for retreaving food storage dataframe
-
-    :return: storage dataframe
-    """
+        :return: storage dataframe
+        """
         return self.storage.df.copy()
+
+    def storage_quantities_by_type(self):
+        return self.storage.get_quantity_by_food()
 
     def run_one_day(self, budget: float, food_donations: float):
         """Runs simulation for the day. Also calls `run_one_day` for each pantry it serves.
-
-    :param budget: Budget for the day
-    :param food_donations: Food donations in pounds of food
-    :return: Overall waste, demand (based on orders) and utility of all pantries
-    """
+        :param budget: Budget for the day
+        :param food_donations: Food donations in pounds of food
+        :return: Overall waste, demand (based on orders) and utility of all pantries
+        """
+        self.purchase_food(budget)
         new_food = Food.generate_donation(food_donations)
+
         self.storage.add(new_food)
+
+        self.storage.quality_control()
 
         total_utility = []
         total_waste = None
@@ -96,17 +121,15 @@ class FoodBank:
 
     def get_food_quantity(self):
         """Returns quantity of food in storage
-
-    :return:
-    """
+        :return:
+        """
         return self.storage.get_quantity()
 
     def get_food_order(self, order):
         """Fulfills given order
-
-    :param order: 
-    :return: order result
-    """
+        :param order: 
+        :return: order result
+        """
         return self.storage.subtract(order)
 
     @classmethod
@@ -117,28 +140,21 @@ class FoodBank:
 
     def purchase_food(self, budget: float):
         """Purchases food using given budget
-
-    :param budget: budget in dollars
-    """
-        demand = self.last_week_pantry_demand_proportion()
+        :param budget: budget in dollars
+        """
+        demand = self.last_week_demand_proportion()
         types = demand.keys()
         remaining_days = [TYPES[t]['max_days'] for t in types]
         quantity = [demand[t] * budget / Global.price_for(t) for t in types]
 
-        purchase = pd.DataFrame({"type": types, "remaining_days": remaining_days, "quantity": quantity})
-        self.storage.add(purchase)
+        self.last_purchase = pd.DataFrame({"type": types, "remaining_days": remaining_days, "quantity": quantity})
+        self.storage.add(self.last_purchase)
         return sum(quantity)
 
-    def get_last_week_total_demand(self):
+    def last_week_total_demand(self) -> float:
         return sum([sum(day_order.values()) for day_order in self.last_week_demand])
 
-    def last_week_pantry_demand_proportion(self):
-        """Returns demand in proportions. Used to decide what food to buy next.
-    Calculation based on last week's demand
-
-    :return: demand proportions
-    """
-        total = self.get_last_week_total_demand()
+    def last_week_aggregate_demand(self) -> Dict[str, float]:
         pantry_demand = {}
         for demand in self.last_week_demand:
             for food, amount in demand.items():
@@ -146,13 +162,23 @@ class FoodBank:
                     pantry_demand[food] = amount
                     continue
                 pantry_demand[food] += amount
-        return {food: 1 / len(Global.get_food_types()) if total == 0 else (amount / total) for (food, amount) in pantry_demand.items()}
+        return pantry_demand
+
+    def last_week_demand_proportion(self):
+        """Returns demand in proportions. Used to decide what food to buy next.
+        Calculation based on last week's demand
+        :return: demand proportions
+        """
+        total = self.last_week_total_demand()
+        if total == 0:
+            return {food: 1 / len(Global.get_food_types()) for food in TYPES.keys()}
+        pantry_demand = self.last_week_aggregate_demand()
+        return {food: (amount / total) for (food, amount) in pantry_demand.items()}
 
     def update_demand(self, order):
         """Updates pantry demand values
-
-    :param order: order made by a pantry
-    """
+        :param order: order made by a pantry
+        """
         for food, amount in order.items():
             self.pantry_demand[food] += amount
 
@@ -166,11 +192,10 @@ class FoodBank:
     @classmethod
     def increment_utility(cls, total_utility: float, utility: float):
         """Increments total utility
-
-    :param total_utility: 
-    :param utility: 
-    :return: new total utility
-    """
+        :param total_utility: 
+        :param utility: 
+        :return: new total utility
+        """
         if total_utility is None:
             return utility
         else:
@@ -178,39 +203,46 @@ class FoodBank:
 
 
 if __name__ == '__main__':
-    food_insecure_pop = 80_000
+    food_insecure_pop = 30_000
     initial_storage = 50_000
-    budget = 200_000
-    food_donations = 80_000
+    budget = 40_000
+    food_donations = 30_000
 
     food_bank = FoodBank(food_insecure_pop, initial_storage)
     # Global.add_day()
     Global._base_prices = {
         STP: 2,
-        FFV: 1,
+        FFV: 3,
         PFV: 2,
-        FPT: 1,
+        FPT: 3,
         PPT: 2,
     }
     import matplotlib.pyplot as plt
     utility_history = []
     bank_storage = []
     demand_history = []
+    quantity_by_food = None
     for day in range(50):
         # print('current day: ', day)
         _, _, utility, _ = food_bank.run_one_day(budget, food_donations)
         bank_storage.append(sum(food_bank.storage.get_quantity().values()))
         utility_history.append(utility)
-        demand_history.append(food_bank.get_last_week_total_demand())
+        demand_history.append(food_bank.last_week_total_demand())
+
+        if quantity_by_food is None:
+            quantity_by_food = food_bank.storage_quantities_by_type()
+        else:
+            quantity_by_food = pd.concat([quantity_by_food, food_bank.storage_quantities_by_type()], ignore_index=True)
+        
         Global.add_day()
 
-    fig, ax1 = plt.subplots()
-    ax1.plot(demand_history)
-    plt.title(f'Demand history, insecure pop: {food_insecure_pop}, budget: {budget}, donations: {food_donations}')
+    plt.figure()
+    plt.plot(utility_history, label='utility')
+    plt.title('Utility')
 
-    ax2 = ax1.twinx()
-    ax2.plot(bank_storage, 'r')
-    ax2.set_label('Bank storage history')
+    plt.figure()
+    plt.plot(bank_storage, label='bank storage')
+    plt.title('Bank storage')
 
-    fig.tight_layout()
+    quantity_by_food.plot()
     plt.show()
