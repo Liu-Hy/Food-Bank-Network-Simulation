@@ -7,11 +7,12 @@ from Global import *
 
 
 
-def mod_beta_random(low: float, high: float, mean: float, std: float, samples: int) -> np.ndarray:
+def mod_beta_random(low: float, high: float, mean: float, std: float, samples: int, seed:int = RANDOM_SEED) -> np.ndarray:
     """
     Generate random numbers from a transformed Beta distribution
     Formulas to derive parameters are taken from here
     https://stats.stackexchange.com/questions/12232/calculating-the-parameters-of-a-beta-distribution-using-the-mean-and-variance
+    :param seed: random seed
     :param low: the lowest value possible
     :param high: the highest value possible
     :param mean: the mean of the population
@@ -36,7 +37,7 @@ def mod_beta_random(low: float, high: float, mean: float, std: float, samples: i
     assert sigma ** 2 <= mu * (1 - mu), "Population standard deviation too large for a Beta distribution to exist."
     a = ((1 - mu) / (sigma ** 2) - 1 / mu) * (mu ** 2)
     b = a * (1 / mu - 1)
-    beta = np.random.default_rng().beta(a, b, samples)
+    beta = np.random.default_rng(RANDOM_SEED).beta(a, b, samples)
     beta = low + beta * (high - low)
     return beta
 

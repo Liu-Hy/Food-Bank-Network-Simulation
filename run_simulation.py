@@ -101,7 +101,7 @@ def generate_food_distribution(food_bank_df: pd.DataFrame, num_days: int) -> np.
     return ret
 
 
-def generate_good_prices(price_summary: pd.DataFrame, num_days: int) -> dict[list[float]]:
+def generate_good_prices(price_summary: pd.DataFrame, num_days: int, ) -> dict[list[float]]:
     """
     Use statistics from Bureau of Labor Statistics to generate price distributions for each good
     :param num_days: number of days to run simulation
@@ -121,13 +121,14 @@ def generate_good_prices(price_summary: pd.DataFrame, num_days: int) -> dict[lis
     price_dict[PPT] = good_price_distr(price_summary, "meat", num_days) * PACKAGED_COST_RATIO # modify packaged price
 
     return price_dict
-def good_price_distr(price_summary: pd.DataFrame,good:str, num_days:int)->np.ndarray:
+def good_price_distr(price_summary: pd.DataFrame,good:str, num_days:int, random_seed:int=RANDOM_SEED)->np.ndarray:
     """
     Generate price distribution
     starts at current price and performs a random walk
     resistance grows as price approaches good max or min
     mean change at
 
+    :param random_seed: random seed
     :param price_summary: df of price data
     :param good: string name of row
     :param num_days: number of days
@@ -151,7 +152,7 @@ def good_price_distr(price_summary: pd.DataFrame,good:str, num_days:int)->np.nda
         scale_factor=(mean-prev)/mean # trend toward mean food price
         scaled_change=mean_delta*scale_factor
         print(scaled_change)
-        change=np.random.normal(scaled_change,std_delta) # normal distribution centered around price change
+        change=np.random.default_rng(RANDOM_SEED).normal(scaled_change,std_delta) # normal distribution centered around price change
         price_list.append(prev+change) #calculate new price
     return np.array(price_list)
 
@@ -166,12 +167,14 @@ def tick_day(food_banks: list):
     """
 
 
-def redistribute_food(food_banks: list, distance_mat: np.ndarray, prices:dict=Global._base_prices, payment_source:str="recipient") -> None:
+def redistribute_food(food_banks: list, distance_mat: np.ndarray, payment_source:str="recipient") -> None:
     """
-    Implements cr
+    Implements national food sharing network
 
-    :param prices:
-    :param payment_source:
+    :param payment_source: setting to control distribution strategy,
+    recipient: receiving food bank pays
+    sender: sending food bank pays
+    disaster: government (no transportation cost)
     :param distance_mat: distance matrix between pairs of food banks
     :param food_banks: list of food banks to redistribute food between
     :return: None
