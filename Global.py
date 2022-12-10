@@ -1,5 +1,7 @@
 import numpy as np
 
+RANDOM_SEED = 1
+
 STP = "staples"
 FFV = "fresh_fruits_and_vegetables"
 PFV = "packaged_fruits_and_vegetables"
