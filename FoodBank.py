@@ -3,9 +3,11 @@ import pandas as pd
 from utils import Food
 from typing import List, Dict, Tuple, Any
 from Global import Global, TYPES
+import cython
 
-
+@cython.cclass
 class FoodBank:
+    @cython.ccall
     def __init__(self, food_insecure_pop: int, initial_storage: float,
                  households_per_pantry: int = Global.households_per_pantry):
         """Food bank constructor. Modify `food_insecure_pop` and `households_per_pantry` to simulate crisis.
@@ -27,12 +29,14 @@ class FoodBank:
 
         self.last_purchase = None
 
+    @cython.ccall
     def next_week_storage_estimate(self):
         """Next week's storage considering last week's demand
         """
         _, future_storage = self.storage.subtract(self.last_week_aggregate_demand(), predict=True)
         return future_storage
 
+    @cython.ccall
     def food_going_bad(self) -> Food:
         """Returns Food instance with food going bad considering current demand
         :return: Food instance with all the food that is going bad within next week considering current demand
@@ -40,16 +44,19 @@ class FoodBank:
         # what future stock will look like considering last week's demand
         future_storage = self.next_week_storage_estimate().df
         return Food(future_storage[future_storage['remaining_days'] <= 7])
-    
+
+    @cython.ccall
     def extract_food_from_storage(self, food: Food):
         """Used by simulation to extract food to be sent to other food banks
         :param food: `Food` instace that is the output of this bank's own `food_going_bad`
         """
         self.storage.subtract(food.get_quantity())
 
+    @cython.ccall
     def receive_food(self, food: Food):
         self.storage.add(food)
 
+    @cython.ccall
     def future_unmet_demand(self):
         future_storage = self.next_week_storage_estimate().df
         return Food(future_storage[future_storage['quantity'] < 0])
@@ -58,15 +65,18 @@ class FoodBank:
     # food in demand with not enough supply
     # orders that won't be met (based on true order)
 
+    @cython.ccall
     def food_storage(self):
         """API for retreaving food storage dataframe
         :return: storage dataframe
         """
         return self.storage.df.copy()
 
+    @cython.ccall
     def storage_quantities_by_type(self):
         return self.storage.get_quantity_by_food()
 
+    @cython.ccall
     def run_one_day(self, budget: float, food_donations: float):
         """Runs simulation for the day. Also calls `run_one_day` for each pantry it serves.
         :param budget: Budget for the day
@@ -107,6 +117,7 @@ class FoodBank:
 
         return total_waste, self.pantry_demand, sum(total_utility), None
 
+    @cython.ccall
     @classmethod
     def refine_true_order(cls, order: Dict[str, float]) -> Dict[str, float]:
         return {STP: order[STP],
@@ -115,6 +126,7 @@ class FoodBank:
                 FPT: (FoodBank.price_demand_choice(order, FPT, PPT, PT))[0],
                 PPT: (FoodBank.price_demand_choice(order, FPT, PPT, PT))[1]}
 
+    @cython.ccall
     @classmethod
     def price_demand_choice(cls, order: Dict[str, float], food_a: str, food_b: str, food_type: str):
         if Global.price_for(food_a) < Global.price_for(food_b):
@@ -122,12 +134,14 @@ class FoodBank:
 
         return 0, order[food_type]
 
+    @cython.ccall
     def get_food_quantity(self):
         """Returns quantity of food in storage
         :return:
         """
         return self.storage.get_quantity()
 
+    @cython.ccall
     def get_food_order(self, order):
         """Fulfills given order
         :param order: 
@@ -135,12 +149,14 @@ class FoodBank:
         """
         return self.storage.subtract(order)
 
+    @cython.ccall
     @classmethod
     def increment_food_dict(cls, total_food_dict, new_food_dict):
         if total_food_dict is None:
             return new_food_dict
         return {food: (total_food_dict[food] + food_amount) for food, food_amount in new_food_dict.items()}
 
+    @cython.ccall
     def purchase_food(self, budget: float):
         """Purchases food using given budget
         :param budget: budget in dollars
@@ -154,9 +170,11 @@ class FoodBank:
         self.storage.add(self.last_purchase)
         return sum(quantity)
 
+    @cython.ccall
     def last_week_total_demand(self) -> float:
         return sum([sum(day_order.values()) for day_order in self.last_week_demand])
 
+    @cython.ccall
     def last_week_aggregate_demand(self) -> Dict[str, float]:
         pantry_demand = {}
         for demand in self.last_week_demand:
@@ -167,6 +185,7 @@ class FoodBank:
                 pantry_demand[food] += amount
         return pantry_demand
 
+    @cython.ccall
     def last_week_demand_proportion(self):
         """Returns demand in proportions. Used to decide what food to buy next.
         Calculation based on last week's demand
@@ -178,6 +197,7 @@ class FoodBank:
         pantry_demand = self.last_week_aggregate_demand()
         return {food: (amount / total) for (food, amount) in pantry_demand.items()}
 
+    @cython.ccall
     def update_demand(self, order):
         """Updates pantry demand values
         :param order: order made by a pantry
@@ -185,6 +205,7 @@ class FoodBank:
         for food, amount in order.items():
             self.pantry_demand[food] += amount
 
+    @cython.ccall
     def update_weekly_demand(self, order):
         if order is None:
             return
@@ -192,6 +213,7 @@ class FoodBank:
             self.last_week_demand.pop(0)
         self.last_week_demand.append(order)
 
+    @cython.ccall
     @classmethod
     def increment_utility(cls, total_utility: float, utility: float):
         """Increments total utility

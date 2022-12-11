@@ -8,10 +8,12 @@ from FoodPantry import *
 from geographiclib.geodesic import Geodesic
 import matplotlib.pyplot as plt
 from multiprocessing.pool import ThreadPool as Pool
+import cython
 
 geod = Geodesic.WGS84
 
 
+@cython.cfunc
 def initialize_food_banks(food_bank_df: pd.DataFrame) -> list[FoodBank]:
     """
     Use a combination of previous group data (food insecure population and geocoding) and manually annotated data
@@ -32,6 +34,7 @@ def initialize_food_banks(food_bank_df: pd.DataFrame) -> list[FoodBank]:
     return banks
 
 
+@cython.cfunc
 def generate_distance_matrix(food_bank_df: pd.DataFrame) -> np.ndarray:
     """
 
@@ -57,6 +60,7 @@ def generate_distance_matrix(food_bank_df: pd.DataFrame) -> np.ndarray:
     return distance
 
 
+@cython.cfunc
 def generate_funds_distribution(food_bank_df: pd.DataFrame, num_days: int) -> np.ndarray:
     """
     generates randomized distribution for daily food purchase budget
@@ -85,6 +89,7 @@ def generate_funds_distribution(food_bank_df: pd.DataFrame, num_days: int) -> np
     return ret
 
 
+@cython.cfunc
 def generate_food_distribution(food_bank_df: pd.DataFrame, num_days: int) -> np.ndarray:
     """
     :param num_days: number of days to run simulation
@@ -112,6 +117,7 @@ def generate_food_distribution(food_bank_df: pd.DataFrame, num_days: int) -> np.
     return ret
 
 
+@cython.cfunc
 def generate_good_prices(price_summary: pd.DataFrame, num_days: int, ) -> dict[list[np.ndarray]]:
     """
     Use statistics from Bureau of Labor Statistics to generate price distributions for each good
@@ -136,6 +142,7 @@ def generate_good_prices(price_summary: pd.DataFrame, num_days: int, ) -> dict[l
     return price_dict
 
 
+@cython.cfunc
 def good_price_distr(price_summary: pd.DataFrame, good: str, num_days: int,
                      random_seed: int = RANDOM_SEED) -> np.ndarray:
     """
@@ -175,6 +182,7 @@ def good_price_distr(price_summary: pd.DataFrame, good: str, num_days: int,
     return np.array(price_list)
 
 
+@cython.cfunc
 def precalculate_supply_demand(food_banks: list[FoodBank]) -> (list[Food], list[Food]):
     """
     limit number of calls to food_going_bad, quality control, and future_unmet_demand
@@ -203,6 +211,7 @@ def precalculate_supply_demand(food_banks: list[FoodBank]) -> (list[Food], list[
     return (excess_supply, excess_demand)
 
 
+@cython.cfunc
 def generate_net_demand(num_foodbank: int, excess_supply_demand: tuple[list[Food]]) -> np.ndarray:
     """
 
@@ -231,6 +240,7 @@ def generate_net_demand(num_foodbank: int, excess_supply_demand: tuple[list[Food
     return net_food_demand
 
 
+@cython.cfunc
 def food_network(food_banks: list, distance_mat: np.ndarray, payment_source: str = "recipient", ) -> list(float):
     """
     Implements national food sharing network
@@ -287,6 +297,7 @@ def food_network(food_banks: list, distance_mat: np.ndarray, payment_source: str
     return costs
 
 
+@cython.cfunc
 def food_exchange(sender: FoodBank, recipient: FoodBank, food:Food, type:str):
     """
 
@@ -304,7 +315,7 @@ def food_exchange(sender: FoodBank, recipient: FoodBank, food:Food, type:str):
 
 
 
-
+@cython.cfunc
 def run_one_bank(arg_tuple: Tuple) -> tuple:
     """
     wrapper function for multiprocessing
