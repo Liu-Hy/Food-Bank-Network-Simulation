@@ -239,9 +239,8 @@ def generate_net_demand(num_foodbank: int, excess_supply_demand: tuple[list[Food
                 net_food_demand[k, i, j] = min(available_food[food], -demanded_food[food])
     return net_food_demand
 
-
 @cython.cfunc
-def food_network(food_banks: list, distance_mat: np.ndarray, payment_source: str = "recipient", ) -> list(float):
+def food_network(food_banks: list, distance_mat: np.ndarray, payment_source: str = "recipient", ) -> list[float]:
     """
     Implements national food sharing network
     food banks indexed by (sending,receiving)
@@ -284,7 +283,7 @@ def food_network(food_banks: list, distance_mat: np.ndarray, payment_source: str
     costs = [0] * num_foodbank
     # take top non-zero value of each row, and exchange the food between the food banks
     for i in range(0, len(top_efficiency)):
-        if cost_effective(top_efficiency[i], i) != 0:
+        if cost_effective[top_efficiency[i], i] != 0:
             j = top_efficiency[i]
             if payment_source == "recipient":
                 costs[j] = total_cost[j, i]
@@ -332,10 +331,10 @@ def run_one_bank(arg_tuple: Tuple) -> tuple:
 if __name__ == "__main__":
     pool = Pool()  # initialize MP pool
 
-    food_banks_df = pd.read_csv("input.csv").head(10)  # number of food banks to initialized
+    food_banks_df = pd.read_csv("input.csv").head(20)  # number of food banks to initialized
     prices_df = pd.read_csv("price_summary.csv")
 
-    num_days = 5  # number of days to run simulation
+    num_days = 30  # number of days to run simulation
     inflation_rate = 1.08  # settable
 
     # initialize Global state
