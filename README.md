@@ -104,7 +104,7 @@ We test the following hypotheses on the operation of the foodbank network: \
 **Fairness**: setting quotas on fresh food improves overall food access \
 **Collaboration**: sharing food between food banks improves food access \
 Transport expiring food to reduce waste
-(Stretch goal) flexibility for disaster response
+
 
 ### Unit Food Bank Simulation
 
@@ -118,6 +118,11 @@ The dips in utility are also reasonable, as they represend days when pantries ar
 Furthermore, when a food bank is provided with excessive amounts of donations, we have that utility is much higher, reaching around .32 (out of .4):
 
 ![Excess Donations Bank Utility](./plots/foodbank_utility_history_high_donations.png)
+
+For Hypothesis 1, we find that if the pantry owner has the accurate information about client demand, the utility increases by 8%, and the proportion of clients who get all their demand satisfied increases from 61% to 70%. In a more realisic setting, if only one pantry has transparent information, it will produce 6% more utility and serve 4% more of its clients.
+
+For Hypothesis 2, we find that setting a fixed limit per client slightly worsens the outcome; setting the limit proportional to the number of people in family improves utility by 1% (small but statistically significant). This raises the question of what is the best practice for fairness.
+
 
 ### Simulation level hypothesis: food sharing
 
