@@ -37,7 +37,7 @@ def initialize_food_banks(food_bank_df: pd.DataFrame) -> list[FoodBank]:
 @cython.cfunc
 def generate_distance_matrix(food_bank_df: pd.DataFrame) -> np.ndarray:
     """
-
+    generate pairwise distance between food banks
     :param food_bank_df: food_bank_df: dataframe with food bank locations
     :return: array of distances (km) between food bank pairs (foodbank x foodbank)
 
@@ -92,6 +92,8 @@ def generate_funds_distribution(food_bank_df: pd.DataFrame, num_days: int) -> np
 @cython.cfunc
 def generate_food_distribution(food_bank_df: pd.DataFrame, num_days: int) -> np.ndarray:
     """
+    Generates distrbution of daily food donations based on observed data,
+    Based on Beta distribution
     :param num_days: number of days to run simulation
     :param food_bank_df: dataframe with food bank data per row
     :return: beta distribution of food donations per day (foodbank x day)
@@ -148,8 +150,9 @@ def good_price_distr(price_summary: pd.DataFrame, good: str, num_days: int,
     """
     Generate price distribution
     starts at current price and performs a random walk
-    resistance grows as price approaches good max or min
-    mean change at
+    resistance grows as price diverges from the mean
+
+
 
     :param random_seed: random seed
     :param price_summary: df of price data
@@ -185,9 +188,9 @@ def good_price_distr(price_summary: pd.DataFrame, good: str, num_days: int,
 @cython.cfunc
 def precalculate_supply_demand(food_banks: list[FoodBank]) -> (list[Food], list[Food]):
     """
-    limit number of calls to food_going_bad, quality control, and future_unmet_demand
+    pre-calls and stores results of food_going_bad, quality control, and future_unmet_demand
     :param food_banks:
-    :return: tuple of list of Food objects
+    :return: tuple of list of Food objects (sending foodbank results, receiving foodbank results)
     >>> fb=[FoodBank(10000,3000, ), FoodBank(10000,3000, )]
     >>> sup_demand=precalculate_supply_demand(fb)
     >>> sup_demand[0][0].get_quantity()[FFV]!=0
@@ -214,6 +217,7 @@ def precalculate_supply_demand(food_banks: list[FoodBank]) -> (list[Food], list[
 @cython.cfunc
 def generate_net_demand(num_foodbank: int, excess_supply_demand: tuple[list[Food]]) -> np.ndarray:
     """
+    calculates net demand per food type by taking the min and max of each food type demanded
 
     :param num_foodbank: number of food banks
     :param excess_supply_demand: excess supply and demand Food objects per food bank
@@ -253,7 +257,8 @@ def food_network(food_banks: list, distance_mat: np.ndarray, payment_source: str
     :param food_banks: list of food banks to redistribute food between
     :return: Returns monetary cost of transport paid per food bank
 
-    Difficult to write doctests, as there are many dependencies in the Food Bank class and the
+    Difficult to write doctests, as there are many dependencies in the Food Bank class and the markov chain nature
+    of the project
 
     """
     num_foodbank = len(food_banks)
@@ -265,8 +270,6 @@ def food_network(food_banks: list, distance_mat: np.ndarray, payment_source: str
     pounds_to_move = np.sum(net_demand, axis=0)
 
     pounds_to_move[pounds_to_move < 1000] = 0  # set threshold for reasonable transport
-    print(np.sum(pounds_to_move))
-    print(pounds_to_move)
     for i in range(len(food_goods)):
         food_market_value += net_demand[i] * Global.price_for(food_goods[i])
 
@@ -277,11 +280,13 @@ def food_network(food_banks: list, distance_mat: np.ndarray, payment_source: str
 
     cost_effective = total_cost - food_market_value  # gap between transport cost and market price represents economic value
 
+    cost_effective[cost_effective < 0] = 0
     top_efficiency = np.argmax(cost_effective,
                                axis=0)  # max of each column is most efficient truck for given food bank to send
 
     costs = [0] * num_foodbank
     # take top non-zero value of each row, and exchange the food between the food banks
+
     for i in range(0, len(top_efficiency)):
         if cost_effective[top_efficiency[i], i] != 0:
             j = top_efficiency[i]
@@ -290,27 +295,39 @@ def food_network(food_banks: list, distance_mat: np.ndarray, payment_source: str
             if payment_source == "sender":
                 costs[i] = total_cost[j, i]
             for k in range(len(food_goods)):
-                #amount = net_demand[k, j, i]  # access amount of food to transfer for each food type
-                food_exchange(food_banks[j], food_banks[i], excess_supply_demand[0][j], food_goods[k])
+                amount = net_demand[k, j, i]  # access amount of food to transfer for each food type
+                food_exchange(food_banks[j], food_banks[i], excess_supply_demand[0][j], food_goods[k], amount)
 
     return costs
 
 
 @cython.cfunc
-def food_exchange(sender: FoodBank, recipient: FoodBank, food:Food, type:str):
+def food_exchange(sender: FoodBank, recipient: FoodBank, food:Food, type:str,amount:float):
+
     """
 
-    technically incorrect implementation
+    send specific food type if sufficient
     :param sender: Foodbank sending food
     :param recipient: Foodbank receiving food
     :param food: amount of food to exchange
     :param type: food category to transfer
     :param amount: amount of food to transfer
     :return: None
+    >>> FB1=FoodBank(10000,20000)
+    >>> FB2 = FoodBank (10000,0)
+    >>> excess=precalculate_supply_demand([FB1,FB2])
+    >>> food_exchange(FB1, FB2, excess[0][0], STP, 100)
+    >>> FB1.get_food_quantity()
+    >>> FB2.get_food_quantity()
     """
-    type=food.select(type)
-    sender.extract_food_from_storage(type)
-    recipient.receive_food(type)
+
+    sub_food=food.select(type)
+    if sub_food.get_quantity()[type]>=amount:
+        try:
+            sender.extract_food_from_storage(sub_food)
+            recipient.receive_food(sub_food)
+        except ValueError:
+            print("Food already distributed")
 
 
 
@@ -329,14 +346,23 @@ def run_one_bank(arg_tuple: Tuple) -> tuple:
 
 
 if __name__ == "__main__":
+
+
+    ###CONFIG VARIABLES (SETTABLE)###
+    num_days = 30  # number of days to run simulation
+    inflation_rate = 1.08
+    num_food_banks=20
+    network_distribution=False
+
+    if network_distribution:
+        network_desc="WITH_EXCHANGE"
+    else:
+        network_desc = "WITHOUT_EXCHANGE"
+
     pool = Pool()  # initialize MP pool
 
-    food_banks_df = pd.read_csv("input.csv").head(20)  # number of food banks to initialized
+    food_banks_df = pd.read_csv("input.csv").head(num_food_banks)  # number of food banks to initialized
     prices_df = pd.read_csv("price_summary.csv")
-
-    num_days = 30  # number of days to run simulation
-    inflation_rate = 1.08  # settable
-
     # initialize Global state
     global_state = Global()
     global_state._price_inflation_pct = inflation_rate
@@ -347,24 +373,37 @@ if __name__ == "__main__":
 
     # generate randomized distributions
     daily_budget = generate_funds_distribution(food_banks_df, num_days)
-
     daily_donations = generate_food_distribution(food_banks_df, num_days) * DONATION_BOOST
     good_prices = generate_good_prices(prices_df, num_days)
+
+    #plot price distributions
     days = np.arange(0, num_days)
     plt.plot(days, good_prices[FFV])
+    plt.title("Fresh fruit and vegetable price per day")
+    plt.savefig("plots/FFV_price_distr.png")
+    plt.ylabel('Price ($)')
+    plt.xlabel('Day')
     plt.show()
-    """
+
+    #plot donation distribution
     plt.plot(days, daily_donations[0])
+    plt.title("Donations ($) per day")
+    plt.savefig("plots/donations.png")
+    plt.ylabel('Donations ($)')
+    plt.xlabel('Day')
     plt.show()
+
+    """
     plt.plot(days, daily_budget[0])
     plt.show()
     """
-
+    #initialize empty dicts
     daily_waste = dict()
     for d in food_goods:
         daily_waste[d] = [0] * num_days
     weekly_utility = []
     weekly_total = 0
+
     for i in range(0, num_days):
         if i % 7 == 0:
             weekly_utility.append(weekly_total)
@@ -379,7 +418,7 @@ if __name__ == "__main__":
 
         Global.base_prices()  # apply inflation
 
-        if i > 0:
+        if i > 0 and network_distribution:
             food_network(food_banks, distances)
         args = []  # args for multiprocess
         for j in range(0, len(food_banks)):
@@ -399,11 +438,33 @@ if __name__ == "__main__":
 
     weeks = np.arange(0, len(weekly_utility))
 
-    plt.plot(weeks, weekly_utility)
+    plt.plot(weeks, weekly_utility[0:])
+    plt.title("Total utility per week")
+    plt.ylabel('Total utility')
+    plt.xlabel('Week number')
+    plt.savefig("plots/sim_level_utility_" + network_desc)
+    plt.show()
+    print("Average weekly utility:")
+    print(np.mean(weekly_utility))
+    print("Min weekly utility:")
+    print(np.min(weekly_utility))
+
+    print()
+
+
+    print("Average waste:")
+    for w in daily_waste:
+        print(w)
+        print(np.mean(daily_waste[w]))
+        plt.plot(days, daily_waste[w], label=w)
+    plt.title("Daily waste by type")
+    plt.ylabel('Wasted food')
+    plt.xlabel('Day')
+    plt.legend()
+    plt.savefig("plots/sim_level_waste_"+network_desc)
+
     plt.show()
 
-    for w in daily_waste:
-        plt.plot(days, daily_waste[w])
-    plt.show()
+
 
     pool.close()
