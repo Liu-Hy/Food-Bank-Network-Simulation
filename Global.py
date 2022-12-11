@@ -16,7 +16,7 @@ PT = "protein"
 
 rng = np.random.default_rng()
 
-"""Only PERSON_WEEKLY_DEMAND and FAMILY-DISTRIBUTION are accurate. Others are fabricated. """
+"""Only PERSONAL_WEEKLY_DEMAND and FAMILY_DISTRIBUTION are accurate. Others are educated guess. """
 TYPES = {STP: {"proportion": 0.3, "max_days": 180},
          FFV: {"proportion": 0.1, "max_days": 14},
          PFV: {"proportion": 0.25, "max_days": 360},
@@ -29,6 +29,8 @@ PERSONAL_WEEKLY_DEMAND = {STP: {"mean": 5.125, "std": 0.4},
 
 # 1.24% households have 7 or more persons. Assume the max number is 10 person, and 7-10 persons are equally likely
 FAMILY_DISTRIBUTION = [0.2845, 0.3503, 0.1503, 0.1239, 0.0583, 0.0203] + ([0.0031] * 4)
+
+DEMAND_RATIO = 0.4  # from interview and statistics, clients on average need 40% of their demand from food banks
 
 ELASTICITY = {STP: -0.3, FV: -0.5, PT: -0.6}
 
@@ -56,7 +58,7 @@ class Global:
         GAS: 0
     }
     config = {
-        "pantry": {"set_limit": False, "use_real_demand": False}
+        "pantry": {"set_limit": True, "use_real_demand": False}
     }
 
     @classmethod

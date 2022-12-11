@@ -5,7 +5,6 @@ from typing import Dict, Tuple
 import numpy as np
 import pandas as pd
 
-#from FoodBank import FoodBank
 from Global import *
 from utils import Food, mod_beta_random
 
@@ -18,8 +17,7 @@ class FoodPantry:
         self.config = config
         self.clients = self.generate_clients()
         self.num_people = self.clients[("num_people", "")].sum()
-        # Inferred from interview and statistics, clients on average need 40% of their demand from foodbanks
-        self.mean_demand = {k: (v["mean"] * self.num_people * 0.4) for k, v in PERSONAL_WEEKLY_DEMAND.items()}
+        self.mean_demand = {k: (v["mean"] * self.num_people * DEMAND_RATIO) for k, v in PERSONAL_WEEKLY_DEMAND.items()}
         self.food = Food()
         self.operation_day = rng.integers(0, 7)
         self.previous_record = []
