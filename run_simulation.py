@@ -186,7 +186,7 @@ def good_price_distr(price_summary: pd.DataFrame, good: str, num_days: int,
 
 
 @cython.cfunc
-def precalculate_supply_demand(food_banks: list[FoodBank]) -> (list[Food], list[Food]):
+def precalculate_supply_demand(food_banks: list[FoodBank]) -> tuple[list[Food], list[Food]]:
     """
     pre-calls and stores results of food_going_bad, quality control, and future_unmet_demand
     :param food_banks:
