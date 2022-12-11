@@ -61,6 +61,10 @@ We consider the utility of food as a monotonic function of the proportion of dem
 
 ### Foodbank supply
 
+Food bank supply is determined by the simulation for the most part.
+Every day it will receive a budget and a donation (in pounds of food).
+It will then use those values to purchase and add the donation to its storage.
+
 ### Foodbank decision-making
 
 The food banks use all of the received budget to purchase food. The purchase decision is made based on a weekly aggregate demand informed by each pantry.
