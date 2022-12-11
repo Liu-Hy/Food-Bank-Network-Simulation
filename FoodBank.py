@@ -47,6 +47,9 @@ class FoodBank:
         """
         self.storage.subtract(food.get_quantity())
 
+    def receive_food(self, food: Food):
+        self.storage.add(food)
+
     def future_unmet_demand(self):
         future_storage = self.next_week_storage_estimate()
         return future_storage[future_storage['quantity'] < 0]
