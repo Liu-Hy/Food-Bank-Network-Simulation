@@ -130,11 +130,14 @@ def generate_good_prices(price_summary: pd.DataFrame, num_days: int, ) -> dict[l
     price_dict[FFV] = good_price_distr(price_summary, "ffv", num_days)
     price_dict[FPT] = good_price_distr(price_summary, "meat", num_days)
     price_dict[STP] = good_price_distr(price_summary, "staples", num_days)
-    price_dict[PFV] = good_price_distr(price_summary, "ffv", num_days) * PACKAGED_COST_RATIO # modify packaged price
-    price_dict[PPT] = good_price_distr(price_summary, "meat", num_days) * PACKAGED_COST_RATIO # modify packaged price
+    price_dict[PFV] = good_price_distr(price_summary, "ffv", num_days) * PACKAGED_COST_RATIO  # modify packaged price
+    price_dict[PPT] = good_price_distr(price_summary, "meat", num_days) * PACKAGED_COST_RATIO  # modify packaged price
 
     return price_dict
-def good_price_distr(price_summary: pd.DataFrame,good:str, num_days:int, random_seed:int=RANDOM_SEED)->np.ndarray:
+
+
+def good_price_distr(price_summary: pd.DataFrame, good: str, num_days: int,
+                     random_seed: int = RANDOM_SEED) -> np.ndarray:
     """
     Generate price distribution
     starts at current price and performs a random walk
@@ -154,28 +157,25 @@ def good_price_distr(price_summary: pd.DataFrame,good:str, num_days:int, random_
     True
     """
     price_summary = price_summary.set_index("good")
-    mean =price_summary.loc[good]["mean"]
-    real_price=price_summary.loc[good]["latest_price"]
+    mean = price_summary.loc[good]["mean"]
+    real_price = price_summary.loc[good]["latest_price"]
 
     mean_delta = price_summary.loc[good]["mean_delta"]
-    mean_delta = mean_delta/30 #monthly mean change to daily mean change
+    mean_delta = mean_delta / 30  # monthly mean change to daily mean change
     std_delta = price_summary.loc[good]["std_delta"]
-    std_delta = std_delta/math.sqrt(30) #monthly std to daily std
-    price_list=[mean] #start random walk from historical mean
+    std_delta = std_delta / math.sqrt(30)  # monthly std to daily std
+    price_list = [mean]  # start random walk from historical mean
 
     for i in range(1, num_days):
-        prev=price_list[i-1] # start from previous day price
-        scale_factor=(mean-prev)/mean # trend toward mean food price
-        scaled_change=mean_delta*scale_factor
-        change=np.random.normal(scaled_change,std_delta) # normal distribution centered around price change
-        price_list.append(prev+change) #calculate new price
+        prev = price_list[i - 1]  # start from previous day price
+        scale_factor = (mean - prev) / mean  # trend toward mean food price
+        scaled_change = mean_delta * scale_factor
+        change = np.random.normal(scaled_change, std_delta)  # normal distribution centered around price change
+        price_list.append(prev + change)  # calculate new price
     return np.array(price_list)
 
 
-
-
-
-def precalculate_supply_demand(food_banks:list[FoodBank]) ->(list[Food], list[Food]):
+def precalculate_supply_demand(food_banks: list[FoodBank]) -> (list[Food], list[Food]):
     """
     limit number of calls to food_going_bad, quality control, and future_unmet_demand
     :param food_banks:
@@ -189,21 +189,21 @@ def precalculate_supply_demand(food_banks:list[FoodBank]) ->(list[Food], list[Fo
 
 
     """
-    #precalculate food bank demands and supplies
-    excess_supply=[]
-    excess_demand=[]
+    # precalculate food bank demands and supplies
+    excess_supply = []
+    excess_demand = []
     for f in food_banks:
-        #precalculate supply and remove going bad food
-        supply=f.food_going_bad()
+        # precalculate supply and remove going bad food
+        supply = f.food_going_bad()
         supply.quality_control()
         excess_supply.append(supply)
 
-        #precalculate demands for each food bank
+        # precalculate demands for each food bank
         excess_demand.append(f.future_unmet_demand())
-    return (excess_supply,excess_demand)
+    return (excess_supply, excess_demand)
 
 
-def generate_net_demand(num_foodbank:int, excess_supply_demand:tuple[list[Food]]) -> np.ndarray:
+def generate_net_demand(num_foodbank: int, excess_supply_demand: tuple[list[Food]]) -> np.ndarray:
     """
 
     :param num_foodbank: number of food banks
@@ -216,21 +216,22 @@ def generate_net_demand(num_foodbank:int, excess_supply_demand:tuple[list[Food]]
 
     """
 
-    net_food_demand=np.zeros([len(food_goods),num_foodbank,num_foodbank]) #food type by food bank by food bank matrix
+    net_food_demand = np.zeros(
+        [len(food_goods), num_foodbank, num_foodbank])  # food type by food bank by food bank matrix
     for i in range(num_foodbank):
-        available_food=excess_supply_demand[0][i].get_quantity()
+        available_food = excess_supply_demand[0][i].get_quantity()
         for j in range(num_foodbank):
-            demanded_food=excess_supply_demand[1][j].get_quantity()
+            demanded_food = excess_supply_demand[1][j].get_quantity()
             for k in range(len(food_goods)):
-                food=food_goods[k]
-                if available_food[food]!=0 and -demanded_food[food]!=0:
-                    print(available_food[food]!=0)
-                    print(-demanded_food[food]!=0)
-                net_food_demand[k,i,j]=min(available_food[food], -demanded_food[food])
+                food = food_goods[k]
+                if available_food[food] != 0 and -demanded_food[food] != 0:
+                    print(available_food[food] != 0)
+                    print(-demanded_food[food] != 0)
+                net_food_demand[k, i, j] = min(available_food[food], -demanded_food[food])
     return net_food_demand
 
 
-def food_network(food_banks: list, distance_mat: np.ndarray, payment_source:str="recipient",) -> None:
+def food_network(food_banks: list, distance_mat: np.ndarray, payment_source: str = "recipient", ) -> list(float):
     """
     Implements national food sharing network
     food banks indexed by (sending,receiving)
@@ -241,43 +242,70 @@ def food_network(food_banks: list, distance_mat: np.ndarray, payment_source:str=
     disaster: government (no transportation cost)
     :param distance_mat: distance matrix between pairs of food banks
     :param food_banks: list of food banks to redistribute food between
-    :return: None
+    :return: Returns monetary cost of transport paid per food bank
 
     Difficult to write doctests, as there are many dependencies in the Food Bank class and the
 
     """
-    num_foodbank=len(food_banks)
-    food_market_value=np.empty([num_foodbank, num_foodbank])
+    num_foodbank = len(food_banks)
+    food_market_value = np.empty([num_foodbank, num_foodbank])
 
-    excess_supply_demand=precalculate_supply_demand(food_banks)
-    net_demand=generate_net_demand(num_foodbank, excess_supply_demand)
+    excess_supply_demand = precalculate_supply_demand(food_banks)
+    net_demand = generate_net_demand(num_foodbank, excess_supply_demand)
 
-    pounds_to_move=np.sum(net_demand, axis=0)
+    pounds_to_move = np.sum(net_demand, axis=0)
 
-    pounds_to_move[pounds_to_move<1000] = 0 # set threshold for reasonable transport
+    pounds_to_move[pounds_to_move < 1000] = 0  # set threshold for reasonable transport
     print(np.sum(pounds_to_move))
     print(pounds_to_move)
     for i in range(len(food_goods)):
-        food_market_value+=net_demand[i]*Global.price_for(food_goods[i])
+        food_market_value += net_demand[i] * Global.price_for(food_goods[i])
 
-    cost_per_truck=distance_mat/TRUCK_MPG*Global._gas_price * 2 #return trip for truck
-    cost_per_lb_truck=cost_per_truck/POUNDS_PER_TRUCK
+    cost_per_truck = distance_mat / TRUCK_MPG * Global._gas_price * 2  # return trip for truck
+    cost_per_lb_truck = cost_per_truck / POUNDS_PER_TRUCK
 
-    total_cost=cost_per_lb_truck*pounds_to_move
+    total_cost = cost_per_lb_truck * pounds_to_move
 
-    cost_effective= total_cost-food_market_value # if transport>market value of food, then feasible
-    cost_effective[cost_effective < 0] = 0
+    cost_effective = total_cost - food_market_value  # gap between transport cost and market price represents economic value
 
-def food_subset(food_supply, food_to_remove:dict):
+    top_efficiency = np.argmax(cost_effective,
+                               axis=0)  # max of each column is most efficient truck for given food bank to send
+
+    costs = [0] * num_foodbank
+    # take top non-zero value of each row, and exchange the food between the food banks
+    for i in range(0, len(top_efficiency)):
+        if cost_effective(top_efficiency[i], i) != 0:
+            j = top_efficiency[i]
+            if payment_source == "recipient":
+                costs[j] = total_cost[j, i]
+            if payment_source == "sender":
+                costs[i] = total_cost[j, i]
+            for k in range(len(food_goods)):
+                #amount = net_demand[k, j, i]  # access amount of food to transfer for each food type
+                food_exchange(food_banks[j], food_banks[i], excess_supply_demand[0][j], food_goods[k])
+
+    return costs
+
+
+def food_exchange(sender: FoodBank, recipient: FoodBank, food:Food, type:str):
     """
 
-    :param food_supply:
-    :param food_to_remove:
-    :return: new food object
+    technically incorrect implementation
+    :param sender: Foodbank sending food
+    :param recipient: Foodbank receiving food
+    :param food: amount of food to exchange
+    :param type: food category to transfer
+    :param amount: amount of food to transfer
+    :return: None
     """
+    type=food.select(type)
+    sender.extract_food_from_storage(type)
+    recipient.receive_food(type)
 
 
-def run_one_bank(arg_tuple:Tuple) -> tuple:
+
+
+def run_one_bank(arg_tuple: Tuple) -> tuple:
     """
     wrapper function for multiprocessing
     :param tuple(food_bank, daily budget, daily donations, index i, index j)
@@ -285,31 +313,33 @@ def run_one_bank(arg_tuple:Tuple) -> tuple:
     :return: tuple of tick one day output
     """
 
-    total_waste, pantry_demand, total_utility, _ = arg_tuple[0].run_one_day(arg_tuple[1][arg_tuple[4],arg_tuple[3]], arg_tuple[2][arg_tuple[4],arg_tuple[3]])
-    return total_waste,pantry_demand,total_utility
+    total_waste, pantry_demand, total_utility, _ = arg_tuple[0].run_one_day(arg_tuple[1][arg_tuple[4], arg_tuple[3]],
+                                                                            arg_tuple[2][arg_tuple[4], arg_tuple[3]])
+    return total_waste, pantry_demand, total_utility
+
 
 if __name__ == "__main__":
-    pool = Pool() #initialize MP pool
+    pool = Pool()  # initialize MP pool
 
-    food_banks_df = pd.read_csv("input.csv").head(10) #number of food banks to initialized
+    food_banks_df = pd.read_csv("input.csv").head(10)  # number of food banks to initialized
     prices_df = pd.read_csv("price_summary.csv")
 
-    num_days=5 #number of days to run simulation
-    inflation_rate=1.08 # settable
+    num_days = 5  # number of days to run simulation
+    inflation_rate = 1.08  # settable
 
-    #initialize Global state
-    global_state=Global()
-    global_state._price_inflation_pct=inflation_rate
+    # initialize Global state
+    global_state = Global()
+    global_state._price_inflation_pct = inflation_rate
 
-    #initialize food banks
-    food_banks=initialize_food_banks(food_banks_df)
-    distances=generate_distance_matrix(food_banks_df)
+    # initialize food banks
+    food_banks = initialize_food_banks(food_banks_df)
+    distances = generate_distance_matrix(food_banks_df)
 
-    #generate randomized distributions
-    daily_budget=generate_funds_distribution(food_banks_df, num_days)
+    # generate randomized distributions
+    daily_budget = generate_funds_distribution(food_banks_df, num_days)
 
-    daily_donations=generate_food_distribution(food_banks_df, num_days)*DONATION_BOOST
-    good_prices=generate_good_prices(prices_df, num_days)
+    daily_donations = generate_food_distribution(food_banks_df, num_days) * DONATION_BOOST
+    good_prices = generate_good_prices(prices_df, num_days)
     days = np.arange(0, num_days)
     plt.plot(days, good_prices[FFV])
     plt.show()
@@ -320,45 +350,44 @@ if __name__ == "__main__":
     plt.show()
     """
 
-    daily_waste=dict()
+    daily_waste = dict()
     for d in food_goods:
-        daily_waste[d]=[0]*num_days
-    weekly_utility=[]
+        daily_waste[d] = [0] * num_days
+    weekly_utility = []
     weekly_total = 0
     for i in range(0, num_days):
-        if i%7==0:
+        if i % 7 == 0:
             weekly_utility.append(weekly_total)
-            weekly_total=0
+            weekly_total = 0
 
-        print("Running day "+ str(i))
+        print("Running day " + str(i))
         for g in good_prices:
-            if g==GAS:
-                Global._gas_price = good_prices[g][i]*Global._price_inflation_pct
+            if g == GAS:
+                Global._gas_price = good_prices[g][i] * Global._price_inflation_pct
             else:
-                Global.set_price(g,good_prices[g][i])
+                Global.set_price(g, good_prices[g][i])
 
-        Global.base_prices()#apply inflation
+        Global.base_prices()  # apply inflation
 
-        if i>0:
+        if i > 0:
             food_network(food_banks, distances)
-        args=[] #args for multiprocess
+        args = []  # args for multiprocess
         for j in range(0, len(food_banks)):
-            curr=food_banks[j]
+            curr = food_banks[j]
             args.append((curr, daily_budget, daily_donations, i, j))
 
-        output=pool.map(run_one_bank, args) #run all food bank day method calls in parallel
+        output = pool.map(run_one_bank, args)  # run all food bank day method calls in parallel
         for r in output:
             if r[0]:
                 for w in r[0]:
-                    daily_waste[w][i]+=r[0][w]
-            #print(pantry_demand)
+                    daily_waste[w][i] += r[0][w]
+            # print(pantry_demand)
             if r[2]:
-                weekly_total+=r[2]
-
+                weekly_total += r[2]
 
         Global.add_day()
 
-    weeks=np.arange(0, len(weekly_utility))
+    weeks = np.arange(0, len(weekly_utility))
 
     plt.plot(weeks, weekly_utility)
     plt.show()
@@ -368,9 +397,3 @@ if __name__ == "__main__":
     plt.show()
 
     pool.close()
-
-
-
-
-
-
