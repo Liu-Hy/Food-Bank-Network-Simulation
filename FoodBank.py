@@ -13,8 +13,8 @@ class FoodBank:
         :param initial_storage: Initial storage of food in pounds. Value given to Food class
         :param households_per_pantry: default to global number
         """
-        # we assume half of the food insecure people actually use the bank
-        num_pantries = int(.5 * food_insecure_pop / households_per_pantry)
+        # we assume a quarter of the food insecure people actually use the bank
+        num_pantries = int(POPULATION_FACTOR * food_insecure_pop / households_per_pantry)
         self.pantries: List[FoodPantry] = [FoodPantry(self, num_households=households_per_pantry) for _ in
                                            range(num_pantries)]
 
@@ -206,10 +206,10 @@ class FoodBank:
 
 
 if __name__ == '__main__':
-    food_insecure_pop = 30_000
-    initial_storage = 50_000
-    budget = 40_000
-    food_donations = 30_000
+    food_insecure_pop = 323340
+    initial_storage = 2267631
+    budget = 38614*2
+    food_donations = 145376*1.5
 
     food_bank = FoodBank(food_insecure_pop, initial_storage)
     # Global.add_day()
@@ -242,10 +242,10 @@ if __name__ == '__main__':
     plt.figure()
     plt.plot(utility_history, label='utility')
     plt.title('Utility')
-
+    plt.show()
     plt.figure()
     plt.plot(bank_storage, label='bank storage')
     plt.title('Bank storage')
-
+    plt.show()
     quantity_by_food.plot()
     plt.show()

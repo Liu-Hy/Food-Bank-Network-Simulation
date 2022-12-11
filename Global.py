@@ -34,19 +34,21 @@ DEMAND_RATIO = 0.4  # from interview and statistics, clients on average need 40%
 
 ELASTICITY = {STP: -0.3, FV: -0.5, PT: -0.6}
 
-STOCKPILE_RATIO = 1 / 26  # foodbanks have 2 weeks of stored food (info from interview)
+STOCKPILE_RATIO = 1 / 52  # foodbanks have 1 week of stored food (info from interview)
 
-FOOD_PURCHASE_BUDGET_RATIO = 0.10  # foodbanks use roughly 10% of annual budget for food purchase (info from disclosure)
+FOOD_PURCHASE_BUDGET_RATIO = 0.20  # foodbanks use roughly 20% of annual budget for food purchase (info from disclosure)
 
 PACKAGED_COST_RATIO = 0.95  # packaged food slightly cheaper than fresh food
 
 BASELINE_PRICE = {STP: 0.881335917, FV: 1.231762712, PT: 2.843222868} #set baseline prices based on mean of observed values
 
 #from (https://www.pensketruckrental.com/commercial-truck-rental/commercial-trucks/refrigerated-trucks/18-26-foot-refrigerated-truck-cdl-required/)
-POUNDS_PER_TRUCK=10,000
+POUNDS_PER_TRUCK=10_000
 TRUCK_MPG= 12
 
+DONATION_BOOST=2 #ratio to boost food donations to enable testing of network
 
+POPULATION_FACTOR=0.1 #set lower to raise global speed and increase food supply
 class Global:
     """Setters should only be used by simulation. Getters can be used by other classes.
   """
@@ -61,8 +63,8 @@ class Global:
         PFV: 0,
         FPT: 0,
         PPT: 0,
-        GAS: 0
     }
+    _gas_price=0
     config = {
         "pantry": {"set_limit": True, "use_real_demand": False}
     }
@@ -108,7 +110,7 @@ class Global:
     def base_prices(cls):
         """Applies inflation to base prices
 
-    :return: base prices dictionary with inclation applied
+    :return: base prices dictionary with inflation applied
     """
         return {k: v * cls._price_inflation_pct for k, v in cls._base_prices.items()}
 
