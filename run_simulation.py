@@ -329,15 +329,14 @@ def food_exchange(sender: FoodBank, recipient: FoodBank, food: Food, type: str, 
 @cython.cfunc
 def run_one_bank(arg_tuple: Tuple) -> tuple:
     """
-    wrapper function for multiprocessing
+    wrapper function for multiprocessing map, no code to test, only wraps args into tuple and calls
     :param tuple(food_bank, daily budget, daily donations, index i, index j, transportation costs)
 
     :return: tuple of tick one day output
     """
 
     total_waste, pantry_demand, total_utility, _ = arg_tuple[0].run_one_day(arg_tuple[1][arg_tuple[4], arg_tuple[3]] -
-                                                                            arg_tuple[5][4], arg_tuple[2][arg_tuple[4],
-                                                                                                          arg_tuple[3]])
+                                                                            arg_tuple[5][4], arg_tuple[2][arg_tuple[4],                                                                                 arg_tuple[3]])
     return total_waste, pantry_demand, total_utility
 
 
