@@ -82,6 +82,13 @@ We consider the utility of food as a monotonic function of the proportion of dem
 
 ### Foodbank decision-making
 
+The food banks use all of the received budget to purchase food. The purchase decision is made based on a weekly aggregate demand informed by each pantry.
+If two food types are equivalent (such as package and fresh protein), the bank buys whichever is cheapest.
+
+We have decided on simulating a good level of transparency between the banks and the pantries. Each week, a pantry will interact with the bank and order food. That food order is based on how much the food bank has in storage so that it never orders more than it needs. The bank does not estimate its pantry demand based on those orders.
+
+We assume that there is communication between the bank and its pantries on what they would actually like to buy. Therefore, we have two orders that come from pantries: their actual order, and their ideal order. Their ideal order represents what they would request from the bank if there were no storage restrictions. The banks use that ideal order to calculate how much food to buy.
+
 ### Simulation distribution sampling:
 
 The simulation is responsible for the generation of distributions for good prices, donations, and the daily budget for each food bank.
