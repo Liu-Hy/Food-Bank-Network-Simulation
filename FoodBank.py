@@ -18,7 +18,7 @@ class FoodBank:
         self.pantries: List[FoodPantry] = [FoodPantry(self, num_households=households_per_pantry) for _ in
                                            range(num_pantries)]
 
-        food_types = food_goods 
+        food_types = food_goods
         self.pantry_demand = dict(zip(food_types, [0] * len(food_types)))
 
         self.storage = Food(initial_storage)
@@ -30,7 +30,7 @@ class FoodBank:
     def next_week_storage_estimate(self):
         """Next week's storage considering last week's demand
         """
-        _, future_storage = self.storage.subtract(self.last_week_aggregate_demand(), inplace=False)
+        _, future_storage = self.storage.subtract(self.last_week_aggregate_demand(), predict=True)
         return future_storage
 
     def food_going_bad(self) -> Food:
