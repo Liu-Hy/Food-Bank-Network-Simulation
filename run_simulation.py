@@ -331,13 +331,14 @@ def food_exchange(sender: FoodBank, recipient: FoodBank, food:Food, type:str,amo
 def run_one_bank(arg_tuple: Tuple) -> tuple:
     """
     wrapper function for multiprocessing
-    :param tuple(food_bank, daily budget, daily donations, index i, index j)
+    :param tuple(food_bank, daily budget, daily donations, index i, index j, transportation costs)
 
     :return: tuple of tick one day output
     """
 
-    total_waste, pantry_demand, total_utility, _ = arg_tuple[0].run_one_day(arg_tuple[1][arg_tuple[4], arg_tuple[3]],
-                                                                            arg_tuple[2][arg_tuple[4], arg_tuple[3]])
+    total_waste, pantry_demand, total_utility, _ = arg_tuple[0].run_one_day(arg_tuple[1][arg_tuple[4], arg_tuple[3]]-
+                                                                            arg_tuple[5][4],arg_tuple[2][arg_tuple[4],
+                                                                            arg_tuple[3]])
     return total_waste, pantry_demand, total_utility
 
 
@@ -413,13 +414,13 @@ if __name__ == "__main__":
                 Global.set_price(g, good_prices[g][i])
 
         Global.base_prices()  # apply inflation
-
+        transportation_costs=[0]*len(food_banks)
         if i > 0 and network_distribution:
-            food_network(food_banks, distances)
+            transportation_costs=food_network(food_banks, distances)
         args = []  # args for multiprocess
         for j in range(0, len(food_banks)):
             curr = food_banks[j]
-            args.append((curr, daily_budget, daily_donations, i, j))
+            args.append((curr, daily_budget, daily_donations, i, j, transportation_costs))
 
         output = pool.map(run_one_bank, args)  # run all food bank day method calls in parallel
         for r in output:
