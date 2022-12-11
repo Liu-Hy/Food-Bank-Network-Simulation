@@ -226,13 +226,13 @@ def generate_net_demand(num_foodbank: int, excess_supply_demand: tuple[list[Food
     """
 
     net_food_demand = np.zeros(
-        [len(food_goods), num_foodbank, num_foodbank])  # food type by food bank by food bank matrix
+        [len(FOOD_GOODS), num_foodbank, num_foodbank])  # food type by food bank by food bank matrix
     for i in range(num_foodbank):
         available_food = excess_supply_demand[0][i].get_quantity()
         for j in range(num_foodbank):
             demanded_food = excess_supply_demand[1][j].get_quantity()
-            for k in range(len(food_goods)):
-                food = food_goods[k]
+            for k in range(len(FOOD_GOODS)):
+                food = FOOD_GOODS[k]
                 if available_food[food] != 0 and -demanded_food[food] != 0:
                     print(available_food[food] != 0)
                     print(-demanded_food[food] != 0)
@@ -267,8 +267,8 @@ def food_network(food_banks: list, distance_mat: np.ndarray, payment_source: str
     pounds_to_move[pounds_to_move < 1000] = 0  # set threshold for reasonable transport
     print(np.sum(pounds_to_move))
     print(pounds_to_move)
-    for i in range(len(food_goods)):
-        food_market_value += net_demand[i] * Global.price_for(food_goods[i])
+    for i in range(len(FOOD_GOODS)):
+        food_market_value += net_demand[i] * Global.price_for(FOOD_GOODS[i])
 
     cost_per_truck = distance_mat / TRUCK_MPG * Global._gas_price * 2  # return trip for truck
     cost_per_lb_truck = cost_per_truck / POUNDS_PER_TRUCK
@@ -289,9 +289,9 @@ def food_network(food_banks: list, distance_mat: np.ndarray, payment_source: str
                 costs[j] = total_cost[j, i]
             if payment_source == "sender":
                 costs[i] = total_cost[j, i]
-            for k in range(len(food_goods)):
+            for k in range(len(FOOD_GOODS)):
                 #amount = net_demand[k, j, i]  # access amount of food to transfer for each food type
-                food_exchange(food_banks[j], food_banks[i], excess_supply_demand[0][j], food_goods[k])
+                food_exchange(food_banks[j], food_banks[i], excess_supply_demand[0][j], FOOD_GOODS[k])
 
     return costs
 
@@ -361,7 +361,7 @@ if __name__ == "__main__":
     """
 
     daily_waste = dict()
-    for d in food_goods:
+    for d in FOOD_GOODS:
         daily_waste[d] = [0] * num_days
     weekly_utility = []
     weekly_total = 0
