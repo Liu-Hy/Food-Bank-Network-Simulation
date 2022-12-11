@@ -14,26 +14,51 @@ class FoodBank:
         :param food_insecure_pop: Number of food insecure people. Used to estimate number of pantries
         :param initial_storage: Initial storage of food in pounds. Value given to Food class
         :param households_per_pantry: default to global number
+
+        >>> bank = FoodBank(food_insecure_pop=10_000,initial_storage=2_000)
+        >>> len(bank.pantries)
+        2
+        >>> bank.pantry_demand #doctest: +ELLIPSIS
+        {'staples': 0, 'fresh_fruits_and_vegetables': 0, ... 'fresh_protein': 0, 'packaged_protein': 0}
+        >>> int(sum(bank.storage.get_quantity().values()))
+        2000
+        >>> bank.last_week_demand
+        []
         """
         # we assume a quarter of the food insecure people actually use the bank
         num_pantries = int(POPULATION_FACTOR * food_insecure_pop / households_per_pantry)
         self.pantries: List[FoodPantry] = [FoodPantry(self, num_households=households_per_pantry) for _ in
                                            range(num_pantries)]
 
-        food_types = food_goods
+        food_types = FOOD_GOODS
         self.pantry_demand = dict(zip(food_types, [0] * len(food_types)))
 
         self.storage = Food(initial_storage)
 
         self.last_week_demand: List[Dict[str, int]] = []
 
-        self.last_purchase = None
+        self.last_purchase: pd.DataFrame | None = None
+
+        self.last_donation = 0
 
     @cython.ccall
-    def next_week_storage_estimate(self):
+    def next_week_storage_estimate(self) -> Food:
         """Next week's storage considering last week's demand
+        :return: future storage Food instance
+
+        >>> bank = FoodBank(food_insecure_pop=10_000,initial_storage=2_000)
+        >>> int(sum(bank.next_week_storage_estimate().get_quantity().values()))
+        2000
+        >>> _ = bank.run_one_day(200, 200)
+        >>> int(sum(bank.next_week_storage_estimate().get_quantity().values()))
         """
         _, future_storage = self.storage.subtract(self.last_week_aggregate_demand(), predict=True)
+
+        donations = self.last_donation * 7
+        if self.last_purchase is not None:
+            future_storage.add(self.last_purchase)
+            future_storage.add(Food(donations))
+
         return future_storage
 
     @cython.ccall
@@ -85,6 +110,7 @@ class FoodBank:
         """
         self.purchase_food(budget)
         new_food = Food.generate_donation(food_donations)
+        self.last_donation = food_donations
 
         self.storage.add(new_food)
 
@@ -168,7 +194,6 @@ class FoodBank:
 
         self.last_purchase = pd.DataFrame({"type": types, "remaining_days": remaining_days, "quantity": quantity})
         self.storage.add(self.last_purchase)
-        return sum(quantity)
 
     @cython.ccall
     def last_week_total_demand(self) -> float:
