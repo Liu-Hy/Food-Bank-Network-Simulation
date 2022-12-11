@@ -1,5 +1,24 @@
 # Food Bank Network Simulation
 
+- [Food Bank Network Simulation](#food-bank-network-simulation)
+  - [Authors](#authors)
+  - [Introduction](#introduction)
+  - [How to run](#how-to-run)
+  - [Data and sources](#data-and-sources)
+  - [Model of operation](#model-of-operation)
+    - [Client demand](#client-demand)
+    - [Purchase and Utility](#purchase-and-utility)
+    - [Foodbank supply](#foodbank-supply)
+    - [Foodbank decision-making](#foodbank-decision-making)
+    - [Simulation distribution sampling:](#simulation-distribution-sampling)
+    - [Simulation food distribution](#simulation-food-distribution)
+  - [Hypotheses](#hypotheses)
+    - [Unit Food Bank Simulation](#unit-food-bank-simulation)
+    - [Simulation level hypothesis: food sharing](#simulation-level-hypothesis-food-sharing)
+  - [Conclusion](#conclusion)
+    - [Limitations](#limitations)
+    - [Future work](#future-work)
+
 ## Authors
 
 Lucian Li (zilul2)
