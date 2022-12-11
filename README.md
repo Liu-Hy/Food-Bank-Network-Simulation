@@ -2,7 +2,18 @@
 ## Introduction
 ## How to run
 code structure
+Each module has its own main function to test the specific operation of the module. 
+
+The main simulation runs in run_simulation.py, with the following environment variables:
+-num_days = 28  # number of days to run simulation
+-inflation_rate = 1.08
+-num_food_banks=10 #take top n foodbanks from dataframe
+-network_distribution=True # set to False to stop network exchange
+    
 ## Data and sources
+
+
+
 ## Model of operation
 ### Client demand
 Three broad types of food are required for healthy living: staple, fruit and vegetables, protein. Under the last two types there are fresh and packaged subtypes. Assume that fresh food is always preferred by clients, and packaged food is a substitute when fresh food is not available. 
