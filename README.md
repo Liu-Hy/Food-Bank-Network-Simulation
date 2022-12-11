@@ -25,6 +25,8 @@ Lucian Li (zilul2)
 
 Rodrigo (rodigu)
 
+Haoyang (Liu-Hy)
+
 ## Introduction
 
 [Presentation](https://docs.google.com/presentation/d/1ie8jrKpwYENkLppdPkxXw-7WEjA0C7TMuPjkQEXgmps/edit?usp=sharing)
@@ -115,7 +117,6 @@ We test the following hypotheses on the operation of the foodbank network: \
 **Information transparency**: Different levels of direct communication between levels (client, pantry, food bank) improves efficiency of food allocation\
 **Fairness**: Setting quotas on fresh food improves overall food access \
 **Collaboration**: Sharing food between food banks improves food access, because expiring food can be transported to where it is needed to reduce waste
-
 
 ### Unit Food Bank Simulation
 
