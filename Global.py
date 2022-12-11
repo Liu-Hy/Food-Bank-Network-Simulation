@@ -9,7 +9,7 @@ FPT = "fresh_protein"
 PPT = "packaged_protein"
 GAS = "gas_price"
 
-food_goods = [STP, FFV, PFV, FPT, PPT]
+FOOD_GOODS = [STP, FFV, PFV, FPT, PPT]
 
 FV = "fruits_and_vegetables"
 PT = "protein"
@@ -61,11 +61,11 @@ class Global:
     _current_day: int = 0
     _price_inflation_pct: float = 1  # dictionary with TYPE (str) float pairs. Set by Simulation.
     _base_prices = {  # base prices for each food type
-        STP: 0,
-        FFV: 0,
-        PFV: 0,
-        FPT: 0,
-        PPT: 0,
+        STP: 1,
+        FFV: 1,
+        PFV: 1,
+        FPT: 1,
+        PPT: 1,
     }
     _gas_price = 0
     config = {
