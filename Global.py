@@ -49,7 +49,7 @@ class Global:
     # we then decided on increasing that number to have less pantries and increase efficiency
     households_per_pantry = 500
     _current_day: int = 0
-    _price_inflation_pct: float  # dictionary with TYPE (str) float pairs. Set by Simulation.
+    _price_inflation_pct: float = 1  # dictionary with TYPE (str) float pairs. Set by Simulation.
     _base_prices = {  # base prices for each food type
         STP: 0,
         FFV: 0,
