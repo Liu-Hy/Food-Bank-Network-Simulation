@@ -82,8 +82,12 @@ class FoodPantry:
         == 0).all(axis=None)
         True
         """
-        # price_ratio = Global.price.ratio
         price_ratio = {STP: 1.1, FV: 1.2, PT: 0.9}
+        ## get the ratio of p/p0. We use the current prices for fresh food types, because the baseline prices for
+        ## packaged food types are not available
+        #current_prices = Global.base_prices()
+        #price_ratio = {STP: current_prices[STP]/BASELINE_PRICE[STP], FV: current_prices[FFV]/BASELINE_PRICE[FV], PT:
+            #current_prices[FPT]/BASELINE_PRICE[PT]}
         factor = {k: (v ** ELASTICITY[k]) for k, v in price_ratio.items()}
         for typ in ELASTICITY.keys():
             self.clients[(typ, "secured")] = self.clients[(typ, "base_secured")] * factor[typ]
@@ -314,7 +318,6 @@ class FoodPantry:
                 self.clients.loc[mask, (typ, "demand")] = quota
                 purchased_fresh, remain, served = self.allocate_food(self.food.select(fresh),
                                                                      self.clients[(typ, "demand")])
-                #print(served)
                 self.clients[(typ, "purchased_fresh")] = purchased_fresh
                 remains.append(remain)
                 served_per_type.append(served)
