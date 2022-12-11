@@ -40,6 +40,7 @@ FOOD_PURCHASE_BUDGET_RATIO = 0.10  # foodbanks use roughly 10% of annual budget 
 
 PACKAGED_COST_RATIO = 0.95  # packaged food slightly cheaper than fresh food
 
+BASELINE_PRICE = {STP: 0.881335917, FV: 1.231762712, PT: 2.843222868} #set baseline prices based on mean of observed values
 
 class Global:
     """Setters should only be used by simulation. Getters can be used by other classes.
