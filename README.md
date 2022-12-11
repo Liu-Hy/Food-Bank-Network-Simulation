@@ -116,11 +116,11 @@ The model demonstrates that transportation is effective at reducing the food was
 Artificially reducing demand or increasing supply upsets the equilibrium and necessitates further changes to variables and design decisions throughout the program. Further work is necessary to determine which model assumptions result in the dramatic outstripping of supply by demand. 
 
 
-##Conclusion/
+## Conclusion
 
 In general, we have constructed a robust model for the behavior of individual pantries and food banks based on interviews and real data. This model has allowed us to conclusively demonstrate that rationing and increased communication between customers, pantries, and food banks generally improves overall food access. We have also demonstrated that using budgets for transporting excess food between food banks significantly reduces food waste while improving/not harming overall utility. 
 
-###Limitations
+### Limitations
 
 The main limitation of the project is the relative unreliability of the data sources and the wide range of assumptions we had to make. While somewhat accurate, the yearly budget and food distribution figures for each food bank are unreliable, and may represent different things at different food banks. Because of missing data, we were also forced to rely on regression to generate some of the values. 
 
@@ -130,7 +130,7 @@ Some interactions between different aspects and methods of the classes may also 
 
 The higher level simulation methods, such as the network distribution, are dependent on so many different stochastic parts and markov chain steps that they often behave unpredicably and are difficult to test/debug. 
 
-###Future work
+### Future work
 
 The most pressing future work lies in refining the simulation parameters. While the code design is functional, there are likely demand ratios, population numbers, supply issues, or other problems that vastly lower the supply or inflate the demand for overall function. From our interviews, we know that they often have leftover or expiring food that they distribute to outher food banks. In our current simulation however, food banks very rarely have leftover stocks and the potential exchanges between food banks is extremely limited. This likely reflects a problem in our model design or parameters, however, with our limited data, it is difficult to determine exactly where the issue is. Future work can be focused on verifying and conducting additional research on model design assumptions or data sources. 
 
