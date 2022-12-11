@@ -18,13 +18,10 @@ Each module has its own main function to test the specific operation of the modu
 
 The main simulation runs in run_simulation.py, with the following environment variables:
 
--num_days = 28 # number of days to run simulation
-
--inflation_rate = 1.08
-
--num_food_banks=10 #take top n foodbanks from dataframe
-
--network_distribution=True # set to False to stop network exchange
+- num_days = 28 # number of days to run simulation
+- inflation_rate = 1.08
+- num_food_banks=10 #take top n foodbanks from dataframe
+- network_distribution=True # set to False to stop network exchange
 
 When it is run, the main method will save daily food waste and weekly average utility to the plots/ directory, as well as printing the average weekly utility and the average waste to the console.
 
