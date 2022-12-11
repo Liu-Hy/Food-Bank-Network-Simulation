@@ -240,6 +240,7 @@ def generate_net_demand(num_foodbank: int, excess_supply_demand: tuple[list[Food
                 net_food_demand[k, i, j] = min(available_food[food], -demanded_food[food])
     return net_food_demand
 
+
 @cython.cfunc
 def food_network(food_banks: list, distance_mat: np.ndarray, payment_source: str = "recipient", ) -> list[float]:
     """
@@ -298,8 +299,7 @@ def food_network(food_banks: list, distance_mat: np.ndarray, payment_source: str
 
 
 @cython.cfunc
-def food_exchange(sender: FoodBank, recipient: FoodBank, food:Food, type:str,amount:float):
-
+def food_exchange(sender: FoodBank, recipient: FoodBank, food: Food, type: str, amount: float):
     """
 
     send specific food type if sufficient
@@ -317,14 +317,13 @@ def food_exchange(sender: FoodBank, recipient: FoodBank, food:Food, type:str,amo
     True
     """
 
-    sub_food=food.select(type)
-    if sub_food.get_quantity()[type]>=amount:
+    sub_food = food.select(type)
+    if sub_food.get_quantity()[type] >= amount:
         try:
             sender.extract_food_from_storage(sub_food)
             recipient.receive_food(sub_food)
         except ValueError:
             pass
-
 
 
 @cython.cfunc
@@ -336,23 +335,22 @@ def run_one_bank(arg_tuple: Tuple) -> tuple:
     :return: tuple of tick one day output
     """
 
-    total_waste, pantry_demand, total_utility, _ = arg_tuple[0].run_one_day(arg_tuple[1][arg_tuple[4], arg_tuple[3]]-
-                                                                            arg_tuple[5][4],arg_tuple[2][arg_tuple[4],
-                                                                            arg_tuple[3]])
+    total_waste, pantry_demand, total_utility, _ = arg_tuple[0].run_one_day(arg_tuple[1][arg_tuple[4], arg_tuple[3]] -
+                                                                            arg_tuple[5][4], arg_tuple[2][arg_tuple[4],
+                                                                                                          arg_tuple[3]])
     return total_waste, pantry_demand, total_utility
 
 
 if __name__ == "__main__":
 
-
     ###CONFIG VARIABLES (SETTABLE)###
     num_days = 28  # number of days to run simulation
     inflation_rate = 1.08
-    num_food_banks=10
-    network_distribution=False
+    num_food_banks = 10
+    network_distribution = True
 
     if network_distribution:
-        network_desc="WITH_EXCHANGE"
+        network_desc = "WITH_EXCHANGE"
     else:
         network_desc = "WITHOUT_EXCHANGE"
 
@@ -373,7 +371,7 @@ if __name__ == "__main__":
     daily_donations = generate_food_distribution(food_banks_df, num_days) * DONATION_BOOST
     good_prices = generate_good_prices(prices_df, num_days)
 
-    #plot price distributions
+    # plot price distributions
     days = np.arange(0, num_days)
     plt.plot(days, good_prices[FFV])
     plt.title("Fresh fruit and vegetable price per day")
@@ -382,7 +380,7 @@ if __name__ == "__main__":
     plt.xlabel('Day')
     plt.show()
 
-    #plot donation distribution
+    # plot donation distribution
     plt.plot(days, daily_donations[0])
     plt.title("Donations ($) per day")
     plt.savefig("plots/donations.png")
@@ -394,7 +392,7 @@ if __name__ == "__main__":
     plt.plot(days, daily_budget[0])
     plt.show()
     """
-    #initialize empty dicts
+    # initialize empty dicts
     daily_waste = dict()
     for d in FOOD_GOODS:
         daily_waste[d] = [0] * num_days
@@ -414,9 +412,9 @@ if __name__ == "__main__":
                 Global.set_price(g, good_prices[g][i])
 
         Global.base_prices()  # apply inflation
-        transportation_costs=[0]*len(food_banks)
+        transportation_costs = [0] * len(food_banks)
         if i > 0 and network_distribution:
-            transportation_costs=food_network(food_banks, distances)
+            transportation_costs = food_network(food_banks, distances)
         args = []  # args for multiprocess
         for j in range(0, len(food_banks)):
             curr = food_banks[j]
@@ -448,7 +446,6 @@ if __name__ == "__main__":
 
     print()
 
-
     print("Average waste:")
     for w in daily_waste:
         print(w)
@@ -458,10 +455,8 @@ if __name__ == "__main__":
     plt.ylabel('Wasted food')
     plt.xlabel('Day')
     plt.legend()
-    plt.savefig("plots/sim_level_waste_"+network_desc)
+    plt.savefig("plots/sim_level_waste_" + network_desc)
 
     plt.show()
-
-
 
     pool.close()
