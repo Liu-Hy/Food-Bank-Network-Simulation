@@ -2,15 +2,15 @@ import math
 import time
 from typing import Dict, Tuple
 
-import numpy as np
 import pandas as pd
+import cython
 
 from Global import *
 from utils import Food, mod_beta_random
 
-
-
+@cython.cclass
 class FoodPantry:
+    @cython.ccall
     def __init__(self, parent, num_households=100, config=Global.config):
         self.parent = parent
         self.num_households = num_households
@@ -22,6 +22,7 @@ class FoodPantry:
         self.operation_day = rng.integers(0, 7)
         self.previous_record = []
 
+    @cython.ccall
     def generate_clients(self) -> pd.DataFrame:
         """For each client's family, generate the weekly physical demand for food, and the baseline level of proportion
         of demand they can already secure through purchasing.
@@ -71,6 +72,7 @@ class FoodPantry:
                 ("num_people", "")]
         return clients
 
+    @cython.ccall
     def initialize_weekly_demand(self):
         """Generate each client's proportion of food secured this week in response to price fluctuation, and their
         demand to the food bank.
@@ -85,9 +87,9 @@ class FoodPantry:
         price_ratio = {STP: 1.1, FV: 1.2, PT: 0.9}
         ## get the ratio of p/p0. We use the current prices for fresh food types, because the baseline prices for
         ## packaged food types are not available
-        #current_prices = Global.base_prices()
-        #price_ratio = {STP: current_prices[STP]/BASELINE_PRICE[STP], FV: current_prices[FFV]/BASELINE_PRICE[FV], PT:
-            #current_prices[FPT]/BASELINE_PRICE[PT]}
+        # current_prices = Global.base_prices()
+        # price_ratio = {STP: current_prices[STP]/BASELINE_PRICE[STP], FV: current_prices[FFV]/BASELINE_PRICE[FV], PT:
+        # current_prices[FPT]/BASELINE_PRICE[PT]}
         factor = {k: (v ** ELASTICITY[k]) for k, v in price_ratio.items()}
         for typ in ELASTICITY.keys():
             self.clients[(typ, "secured")] = self.clients[(typ, "base_secured")] * factor[typ]
@@ -98,6 +100,7 @@ class FoodPantry:
         # remove the purchase record of the previous week
         self.clients.loc[:, (slice(None), ["purchased", "purchased_fresh", "purchased_packaged"])] = 0.
 
+    @cython.ccall
     def estimate_demand(self) -> Dict[str, float]:
         """Predict client demand this week based on prior experience
         :return: A dictionary storing the quantity needed for each type of food.
@@ -114,6 +117,7 @@ class FoodPantry:
                 est_demand[typ] = self.clients[(typ, "demand")].sum().item()
         return est_demand
 
+    @cython.ccall
     def make_order(self, demand: Dict[str, float], stock: Dict[str, float], bank_stock: Dict[str, float]) -> \
             Tuple[dict, dict]:
         """Make an order to the food bank based on estimated demand and the current inventory of the pantry and the
@@ -159,6 +163,7 @@ class FoodPantry:
                     limits[typ] = fresh_qty * 1.3 / self.num_people
         return order, limits
 
+    @cython.ccall
     @classmethod
     def func(cls, data: pd.Series, typ="exp", param=0.7) -> pd.Series:
         """
@@ -188,6 +193,7 @@ class FoodPantry:
             assert -1 <= param < 0, "The quadratic coefficient should be between -1 and 0 for quadratic functions!"
             return param * np.square(data) + (1 - param) * data
 
+    @cython.ccall
     def utility_per_type(self, typ: str) -> pd.Series:
         """After a pantry activity, estimate the increment in the utility of one type of food per household.
         :param typ: The type of food for which to calculate utility increment
@@ -209,6 +215,7 @@ class FoodPantry:
                   * family_size
         return inc
 
+    @cython.ccall
     def get_utility(self) -> float:
         """Estimate the increment in total food utility after a pantry activity
         :return:
@@ -216,8 +223,9 @@ class FoodPantry:
         tot_util = pd.Series(np.zeros(self.num_households))
         for typ in [STP, FV, PT]:
             tot_util += self.utility_per_type(typ)
-        return tot_util.sum() / 3 #/ (self.num_people * 3)
+        return tot_util.sum() / 3  # / (self.num_people * 3)
 
+    @cython.ccall
     def allocate_food(self, food, demand) -> Tuple[pd.Series, pd.DataFrame, int]:
         """Clients line up to purchase one type of food. Record their purchase and update the pantry inventory.
         :param food: the dataframe of some type of food
@@ -283,6 +291,7 @@ class FoodPantry:
             served = pivot  # (served+1) clients get some food
         return purchased, food, served
 
+    @cython.ccall
     def hold_pantry(self, limits: Dict[str, float]) -> Tuple[int, int]:
         """Hold a pantry activity. Although in reality one client shops multiple types of food at once, to avoid
         unnecessary computation, we transform it to the equivalent process of allocating food multiple times, once for
@@ -348,6 +357,7 @@ class FoodPantry:
         partly_served = min(max(served_per_type) + 1, self.num_households)
         return all_served, partly_served
 
+    @cython.ccall
     def run_one_day(self) -> Tuple[Dict[str, float], Dict[str, float], float, Tuple[int, int], Dict[str, float]]:
         """ Run the simulation for one day.
         Changes self.clients, self.food and self.parent.food in place.
@@ -361,9 +371,9 @@ class FoodPantry:
         waste = self.food.quality_control(num_days=7)
         est_demand = self.estimate_demand()
         order, limits = self.make_order(est_demand, self.food.get_quantity(), self.parent.get_food_quantity())
-        #order, limits = self.make_order(est_demand, self.food.get_quantity(), Food(1500).get_quantity())
+        # order, limits = self.make_order(est_demand, self.food.get_quantity(), Food(1500).get_quantity())
         suppl = self.parent.get_food_order(order)
-        #suppl = Food(1500).subtract(order)
+        # suppl = Food(1500).subtract(order)
         self.food.add(suppl)
         self.food.sort_by_freshness()
         self.clients = self.clients.sample(frac=1).reset_index(drop=True)

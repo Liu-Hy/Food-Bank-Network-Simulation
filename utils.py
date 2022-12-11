@@ -4,9 +4,10 @@ import numpy as np
 import pandas as pd
 
 from Global import *
+import cython
 
 
-
+@cython.cfunc
 def mod_beta_random(low: float, high: float, mean: float, std: float, samples: int, seed:int = RANDOM_SEED) -> np.ndarray:
     """
     Generate random numbers from a transformed Beta distribution
@@ -41,7 +42,9 @@ def mod_beta_random(low: float, high: float, mean: float, std: float, samples: i
     beta = low + beta * (high - low)
     return beta
 
+@cython.cclass
 class Food:
+    @cython.ccall
     def __init__(self, stock=None):
         """
         Initialize a Food object which is either empty, or based on a dataframe or total pounds of food.
@@ -93,6 +96,7 @@ class Food:
         else:
             raise ValueError("Invalid input for initialization")
 
+    @cython.ccall
     @classmethod
     def generate_donation(cls, mean_total: float):
         """Generate donated food to a food bank in a day. The quantity of different types and the total are random, but
@@ -121,6 +125,7 @@ class Food:
         df = pd.DataFrame({"type": types, "remaining_days": remaining_days, "quantity": quantity})
         return Food(df)
 
+    @cython.ccall
     def sort_by_freshness(self, reverse=False, inplace=True):
         """Sort the food in each category by the remaining shelf life.
         :param reverse: Whether the freshest food is ranked first. We may assume that clients prefer the freshest food,
@@ -158,6 +163,7 @@ class Food:
             return Food(sorted_df)
         self.df = sorted_df
 
+    @cython.ccall
     def get_quantity(self) -> Dict[str, float]:
         """Get the quantity of each type of food in pounds
         :return: a dictionary that maps food types to corresponding quantities
@@ -177,6 +183,7 @@ class Food:
                 counter[typ] = 0
         return counter
 
+    @cython.ccall
     def select(self, typ):
         """ Select one or more types of food from a Food object
         :param typ: the specified type(s)
@@ -215,6 +222,7 @@ class Food:
         else:
             raise TypeError("The 'typ' parameter should be of either str or list type")
 
+    @cython.ccall
     def quality_control(self, num_days=1, inplace=True) -> Dict[str, float]:
         """Subtract some days from the remaining shelf life of the food, remove the expired food from stock, and record
         the quantity of waste in each category.
@@ -257,6 +265,7 @@ class Food:
             df = df[~mask]
             return waste_counter, df
 
+    @cython.ccall
     def add(self, other) -> None:
         """ Add a new batch of food to stock. Merge food items with same type and remaining days.
         Fully tested on jupyter notebook. Still thinking of how to present tests concisely in doctrings
@@ -291,6 +300,7 @@ class Food:
         self.df = self.df.set_index(["type", "remaining_days"]).add(other.set_index(["type", "remaining_days"]),
                                                                     fill_value=0).reset_index()
 
+    @cython.ccall
     def get_quantity_by_food(self):
         """Returns storages for each type in weight units
         """
@@ -299,6 +309,7 @@ class Food:
             storage_amounts[food_type] = [self.df[self.df['type'] == food_type]['quantity'].sum()]
         return pd.DataFrame(storage_amounts)
 
+    @cython.ccall
     def subtract(self, order: Dict[str, float], predict=False):
         """
         Subtract some quantity of food from stock, and return the Food object with that quantity with specific remaining

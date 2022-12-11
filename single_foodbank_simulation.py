@@ -1,14 +1,17 @@
 from typing import List, Tuple, Dict
 import pandas as pd
-from FoodPantry import FoodPantry
 from Global import Global, TYPES
 from utils import Food
 import time
 import random
 import statistics
+import cython
+from FoodPantry import FoodPantry
 
-
+@cython.cclass
 class FoodBank:
+
+
     def __init__(self, initial_storage: float):
         """Food bank constructor
 
@@ -26,6 +29,7 @@ class FoodBank:
 
         self.storage = Food(initial_storage)
 
+    @cython.ccall
     def food_storage(self):
         """API for retreaving food storage dataframe
 
@@ -33,7 +37,7 @@ class FoodBank:
         """
         return self._storage.df.copy()
 
-
+    @cython.ccall
     def run_one_day(self, budget: float, food_donations: float) -> Tuple[Dict[str, float], Dict[str, float], float]:
         """Runs simulation for the day. Also calls `run_one_day` for each pantry it serves.
 
@@ -56,6 +60,7 @@ class FoodBank:
         # self.purchase_food(budget)
         return self.total_waste, self.pantry_demand, self.total_utility, self.total_served"""
 
+    @cython.ccall
     @classmethod
     def increment_served(cls, total_served, num_served):
         if total_served is None:
@@ -63,6 +68,7 @@ class FoodBank:
         else:
             return (total_served[i] + num_served[i] for i in range(2))
 
+    @cython.ccall
     @classmethod
     def increment_waste(cls, total_waste, new_waste):
         if total_waste is None:
@@ -70,6 +76,7 @@ class FoodBank:
         else:
             return {food: (total_waste[food] + waste) for food, waste in new_waste}
 
+    @cython.ccall
     def purchase_food(self, budget: float):
         """Purchases food using given budget
 
@@ -83,6 +90,7 @@ class FoodBank:
         purchase = pd.DataFrame({"type": types, "remaining_days": remaining_days, "quantity": quantity})
         self._storage.add(purchase)
 
+    @cython.ccall
     def get_pantry_demand_proportion(self):
         """Returns demand in proportions. Used to decide what food to buy next.
 
@@ -91,6 +99,7 @@ class FoodBank:
         total = sum(self.pantry_demand.values())
         return {food: (amount / total) for (food, amount) in self.pantry_demand.items()}
 
+    @cython.ccall
     def update_demand(self, order):
         """Updates pantry demand values
 
@@ -99,6 +108,7 @@ class FoodBank:
         for food, amount in order.items():
             self.pantry_demand[food] += amount
 
+    @cython.ccall
     def get_food_quantity(self):
         """Returns quantity of food in storage
 
@@ -106,6 +116,7 @@ class FoodBank:
     """
         return self.storage.get_quantity()
 
+    @cython.ccall
     def get_food_order(self, order):
         """Fulfills given order
 
@@ -114,6 +125,7 @@ class FoodBank:
     """
         return self.storage.subtract(order)
 
+    @cython.ccall
     @classmethod
     def increment_utility(cls, total_utility: float, utility: float):
         """Increments total utility
