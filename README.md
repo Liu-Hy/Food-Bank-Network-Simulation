@@ -1,7 +1,12 @@
 # Food Bank Network Simulation
+
+## Authors
+Lucian Li (zilul2)
 ## Introduction
+[Presentation](https://docs.google.com/presentation/d/1ie8jrKpwYENkLppdPkxXw-7WEjA0C7TMuPjkQEXgmps/edit?usp=sharing)
 ## How to run
 code structure
+
 Each module has its own main function to test the specific operation of the module. 
 
 The main simulation runs in run_simulation.py, with the following environment variables:
@@ -11,7 +16,17 @@ The main simulation runs in run_simulation.py, with the following environment va
 -network_distribution=True # set to False to stop network exchange
     
 ## Data and sources
+We were inspired by a [previous project] (https://github.com/kinjal-shah4/2021Fall_finals). Our underlying data on the locations of food banks and the food insecure population served by each food bank are from this project. 
 
+We curated additional information through interviews with the Eastern Illinois Food Bank and Wesley Food Pantry conducted by Haoyang.
+
+We also downloaded 10 years of price data from the [Bureau of Labor Statistics] (https://www.bls.gov/regions/mid-atlantic/data/averageretailfoodandenergyprices_usandmidwest_table.htm) for each good.
+
+For each food bank, we obtained data on the GDP per capita of the associated metro area from [Wikipedia] (https://en.wikipedia.org/wiki/List_of_U.S._metropolitan_areas_by_GDP_per_capita)
+
+We also conducted additional research on the annual pounds of food distributed and annual programming budget from the financial disclosures of specific food banks. When not found, this data was filled by linear regression with the food insecure population.
+
+Data cleaning and preprocessing are handled in two jupyter notebooks (summarize_food_and_gas_prices.ipynb and populate_foodbank_metadata.ipynb). 
 
 
 ## Model of operation
@@ -35,7 +50,11 @@ We consider the utility of food as a monotonic function of the proportion of dem
 
 ### Foodbank decision-making
 
+### Simulation distribution sampling:
+The simulation is responsible for the generation of distributions for good prices, donations, and the daily budget for each food bank. 
 
+
+![Good price](plots/FFV_price_distr.png)
 ## Hypotheses
 
 ## Unit Food Bank Simulation
