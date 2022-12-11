@@ -38,8 +38,8 @@ class FoodBank:
         :return: Food instance with all the food that is going bad within next week considering current demand
         """
         # what future stock will look like considering last week's demand
-        future_storage = self.next_week_storage_estimate()
-        return future_storage[future_storage['remaining_days'] <= 7]
+        future_storage = self.next_week_storage_estimate().df
+        return Food(future_storage[future_storage['remaining_days'] <= 7])
     
     def extract_food_from_storage(self, food: Food):
         """Used by simulation to extract food to be sent to other food banks
@@ -51,8 +51,8 @@ class FoodBank:
         self.storage.add(food)
 
     def future_unmet_demand(self):
-        future_storage = self.next_week_storage_estimate()
-        return future_storage[future_storage['quantity'] < 0]
+        future_storage = self.next_week_storage_estimate().df
+        return Food(future_storage[future_storage['quantity'] < 0])
     # food that will be going bad soon with current level of demand
     # projection of how much will be ordered
     # food in demand with not enough supply
