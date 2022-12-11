@@ -18,7 +18,7 @@ class FoodBank:
         self.pantries: List[FoodPantry] = [FoodPantry(self, num_households=households_per_pantry) for _ in
                                            range(num_pantries)]
 
-        food_types = Global.get_food_types()
+        food_types = food_goods 
         self.pantry_demand = dict(zip(food_types, [0] * len(food_types)))
 
         self.storage = Food(initial_storage)
@@ -46,6 +46,9 @@ class FoodBank:
         :param food: `Food` instace that is the output of this bank's own `food_going_bad`
         """
         self.storage.subtract(food.get_quantity())
+
+    def receive_food(self, food: Food):
+        self.storage.add(food)
 
     def future_unmet_demand(self):
         future_storage = self.next_week_storage_estimate()
