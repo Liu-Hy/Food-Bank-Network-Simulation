@@ -1,4 +1,6 @@
 import pandas as pd
+
+import Global
 from Global import *
 from utils import *
 from FoodBank import *
@@ -105,7 +107,7 @@ def generate_food_distribution(food_bank_df: pd.DataFrame, num_days: int) -> np.
         daily_avg = total / 365
         min_val = daily_avg * 0.5  # min is half daily avg
         max_val = daily_avg * 2  # max is twice daily avg
-        std_dev = daily_avg * 0.2  # estimate standard deviation as 20%
+        std_dev = daily_avg * 0.3  # estimate standard deviation
         ret[i] = mod_beta_random(low=min_val, high=max_val, mean=daily_avg, std=std_dev, samples=num_days)
     return ret
 
@@ -118,7 +120,7 @@ def generate_good_prices(price_summary: pd.DataFrame, num_days: int, ) -> dict[l
     :return: dictionary of price distributions for food items and gasoline
     >>> input_df=pd.read_csv("price_summary.csv")
     >>> output=generate_good_prices(input_df, 365)
-    >>> 2.6<np.mean(output[GAS])<3.3
+    >>> 2.5<np.mean(output[GAS])<3.4
     True
 
     """
@@ -146,7 +148,7 @@ def good_price_distr(price_summary: pd.DataFrame,good:str, num_days:int, random_
     :return: distribution of good price
     >>> prices=pd.read_csv("price_summary.csv")
     >>> gas=good_price_distr(prices, "gas", 365)
-    >>> 2.6<np.mean(gas)<3.3
+    >>> 2.5<np.mean(gas)<3.4
     True
     >>> np.std(gas)<0.3
     True
@@ -178,6 +180,14 @@ def precalculate_supply_demand(food_banks:list[FoodBank]) ->(list[Food], list[Fo
     limit number of calls to food_going_bad, quality control, and future_unmet_demand
     :param food_banks:
     :return: tuple of list of Food objects
+    >>> fb=[FoodBank(10000,3000, ), FoodBank(10000,3000, )]
+    >>> sup_demand=precalculate_supply_demand(fb)
+    >>> sup_demand[0][0].get_quantity()[FFV]!=0
+    True
+    >>> sup_demand[1][0].get_quantity()[FFV]!=0
+    False
+
+
     """
     #precalculate food bank demands and supplies
     excess_supply=[]
@@ -199,17 +209,24 @@ def generate_net_demand(num_foodbank:int, excess_supply_demand:tuple[list[Food]]
     :param num_foodbank: number of food banks
     :param excess_supply_demand: excess supply and demand Food objects per food bank
     :return: 3d numpy array of foodtype, sending foodbank, receiving food bank
+
+    >>> fb=[FoodBank(100000,300000, ), FoodBank(100000,300000, )]
+    >>> sup_demand=precalculate_supply_demand(fb)
+    >>> generate_net_demand(2,sup_demand)
+
     """
 
     net_food_demand=np.zeros([len(food_goods),num_foodbank,num_foodbank]) #food type by food bank by food bank matrix
     for i in range(num_foodbank):
         available_food=excess_supply_demand[0][i].get_quantity()
-        print(available_food)
         for j in range(num_foodbank):
             demanded_food=excess_supply_demand[1][j].get_quantity()
             for k in range(len(food_goods)):
                 food=food_goods[k]
-                net_food_demand[k,i,j]=min(available_food[food], demanded_food[food])
+                if available_food[food]!=0 and -demanded_food[food]!=0:
+                    print(available_food[food]!=0)
+                    print(-demanded_food[food]!=0)
+                net_food_demand[k,i,j]=min(available_food[food], -demanded_food[food])
     return net_food_demand
 
 
@@ -225,6 +242,9 @@ def food_network(food_banks: list, distance_mat: np.ndarray, payment_source:str=
     :param distance_mat: distance matrix between pairs of food banks
     :param food_banks: list of food banks to redistribute food between
     :return: None
+
+    Difficult to write doctests, as there are many dependencies in the Food Bank class and the
+
     """
     num_foodbank=len(food_banks)
     food_market_value=np.empty([num_foodbank, num_foodbank])
@@ -233,17 +253,20 @@ def food_network(food_banks: list, distance_mat: np.ndarray, payment_source:str=
     net_demand=generate_net_demand(num_foodbank, excess_supply_demand)
 
     pounds_to_move=np.sum(net_demand, axis=0)
+
+    pounds_to_move[pounds_to_move<1000] = 0 # set threshold for reasonable transport
+    print(np.sum(pounds_to_move))
     print(pounds_to_move)
-    #print(pounds_to_move)
     for i in range(len(food_goods)):
         food_market_value+=net_demand[i]*Global.price_for(food_goods[i])
-    full_truck_count= np.floor(pounds_to_move/POUNDS_PER_TRUCK)
-    partial_truck_count= (pounds_to_move/POUNDS_PER_TRUCK) % 1
 
+    cost_per_truck=distance_mat/TRUCK_MPG*Global._gas_price * 2 #return trip for truck
+    cost_per_lb_truck=cost_per_truck/POUNDS_PER_TRUCK
 
+    total_cost=cost_per_lb_truck*pounds_to_move
 
-
-
+    cost_effective= total_cost-food_market_value # if transport>market value of food, then feasible
+    cost_effective[cost_effective < 0] = 0
 
 def food_subset(food_supply, food_to_remove:dict):
     """
@@ -271,7 +294,7 @@ if __name__ == "__main__":
     food_banks_df = pd.read_csv("input.csv").head(10) #number of food banks to initialized
     prices_df = pd.read_csv("price_summary.csv")
 
-    num_days=20 #number of days to run simulation
+    num_days=5 #number of days to run simulation
     inflation_rate=1.08 # settable
 
     #initialize Global state
@@ -310,7 +333,7 @@ if __name__ == "__main__":
         print("Running day "+ str(i))
         for g in good_prices:
             if g==GAS:
-                Global._gas_price = good_prices[g][i]
+                Global._gas_price = good_prices[g][i]*Global._price_inflation_pct
             else:
                 Global.set_price(g,good_prices[g][i])
 
@@ -323,7 +346,7 @@ if __name__ == "__main__":
             curr=food_banks[j]
             args.append((curr, daily_budget, daily_donations, i, j))
 
-        output=pool.map(run_one_bank, args)
+        output=pool.map(run_one_bank, args) #run all food bank day method calls in parallel
         for r in output:
             if r[0]:
                 for w in r[0]:

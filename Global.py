@@ -40,15 +40,18 @@ FOOD_PURCHASE_BUDGET_RATIO = 0.20  # foodbanks use roughly 20% of annual budget 
 
 PACKAGED_COST_RATIO = 0.95  # packaged food slightly cheaper than fresh food
 
-BASELINE_PRICE = {STP: 0.881335917, FV: 1.231762712, PT: 2.843222868} #set baseline prices based on mean of observed values
+BASELINE_PRICE = {STP: 0.881335917, FV: 1.231762712,
+                  PT: 2.843222868}  # set baseline prices based on mean of observed values
 
-#from (https://www.pensketruckrental.com/commercial-truck-rental/commercial-trucks/refrigerated-trucks/18-26-foot-refrigerated-truck-cdl-required/)
-POUNDS_PER_TRUCK=10_000
-TRUCK_MPG= 12
+# from (https://www.pensketruckrental.com/commercial-truck-rental/commercial-trucks/refrigerated-trucks/18-26-foot-refrigerated-truck-cdl-required/)
+POUNDS_PER_TRUCK = 5_000
+TRUCK_MPG = 10
 
-DONATION_BOOST=2 #ratio to boost food donations to enable testing of network
+DONATION_BOOST = 2  # ratio to boost food donations to enable testing of network
 
-POPULATION_FACTOR=0.1 #set lower to raise global speed and increase food supply
+POPULATION_FACTOR = 0.1  # set lower to raise global speed and increase food supply
+
+
 class Global:
     """Setters should only be used by simulation. Getters can be used by other classes.
   """
@@ -64,7 +67,7 @@ class Global:
         FPT: 0,
         PPT: 0,
     }
-    _gas_price=0
+    _gas_price = 0
     config = {
         "pantry": {"set_limit": True, "use_real_demand": False}
     }
