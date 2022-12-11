@@ -42,6 +42,11 @@ PACKAGED_COST_RATIO = 0.95  # packaged food slightly cheaper than fresh food
 
 BASELINE_PRICE = {STP: 0.881335917, FV: 1.231762712, PT: 2.843222868} #set baseline prices based on mean of observed values
 
+#from (https://www.pensketruckrental.com/commercial-truck-rental/commercial-trucks/refrigerated-trucks/18-26-foot-refrigerated-truck-cdl-required/)
+POUNDS_PER_TRUCK=10,000
+TRUCK_MPG= 12
+
+
 class Global:
     """Setters should only be used by simulation. Getters can be used by other classes.
   """
