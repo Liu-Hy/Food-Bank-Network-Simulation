@@ -1,28 +1,9 @@
 # Food Bank Network Simulation
 
-- [Food Bank Network Simulation](#food-bank-network-simulation)
-  - [Authors](#authors)
-  - [Introduction](#introduction)
-  - [How to run](#how-to-run)
-  - [Data and sources](#data-and-sources)
-  - [Model of operation](#model-of-operation)
-    - [Client demand](#client-demand)
-    - [Purchase and Utility](#purchase-and-utility)
-    - [Foodbank supply](#foodbank-supply)
-    - [Foodbank decision-making](#foodbank-decision-making)
-    - [Simulation distribution sampling:](#simulation-distribution-sampling)
-    - [Simulation food distribution](#simulation-food-distribution)
-  - [Hypotheses](#hypotheses)
-    - [Unit Food Bank Simulation](#unit-food-bank-simulation)
-    - [Simulation level hypothesis: food sharing](#simulation-level-hypothesis-food-sharing)
-  - [Planning](#planning)
-    - [Presentation](#presentation)
-    - [Who pays](#who-pays)
-      - [Suggestions from Mr. Weible:](#suggestions-from-mr-weible)
-
 ## Authors
 
 Lucian Li (zilul2)
+
 Rodrigo (rodigu)
 
 ## Introduction
@@ -80,7 +61,18 @@ We consider the utility of food as a monotonic function of the proportion of dem
 
 ### Foodbank supply
 
+Food bank supply is determined by the simulation for the most part.
+Every day it will receive a budget and a donation (in pounds of food).
+It will then use those values to purchase and add the donation to its storage.
+
 ### Foodbank decision-making
+
+The food banks use all of the received budget to purchase food. The purchase decision is made based on a weekly aggregate demand informed by each pantry.
+If two food types are equivalent (such as package and fresh protein), the bank buys whichever is cheapest.
+
+We have decided on simulating a good level of transparency between the banks and the pantries. Each week, a pantry will interact with the bank and order food. That food order is based on how much the food bank has in storage so that it never orders more than it needs. The bank does not estimate its pantry demand based on those orders.
+
+We assume that there is communication between the bank and its pantries on what they would actually like to buy. Therefore, we have two orders that come from pantries: their actual order, and their ideal order. Their ideal order represents what they would request from the bank if there were no storage restrictions. The banks use that ideal order to calculate how much food to buy.
 
 ### Simulation distribution sampling:
 
@@ -148,30 +140,23 @@ The model demonstrates that transportation is effective at reducing the food was
 
 Artificially reducing demand or increasing supply upsets the equilibrium and necessitates further changes to variables and design decisions throughout the program. Further work is necessary to determine which model assumptions result in the dramatic outstripping of supply by demand.
 
-## Planning
+## Conclusion
 
-### Presentation
+In general, we have constructed a robust model for the behavior of individual pantries and food banks based on interviews and real data. This model has allowed us to conclusively demonstrate that rationing and increased communication between customers, pantries, and food banks generally improves overall food access. We have also demonstrated that using budgets for transporting excess food between food banks significantly reduces food waste while improving/not harming overall utility.
 
-- intro to the problem being addressed: Haoyang
-  - hypothesis
-- research background: Lucian & Haoyang
-  - interviews
-  - data
-- design: Rodrigo
-- code sections: All
-- prelim results: All
+### Limitations
 
-### Who pays
+The main limitation of the project is the relative unreliability of the data sources and the wide range of assumptions we had to make. While somewhat accurate, the yearly budget and food distribution figures for each food bank are unreliable, and may represent different things at different food banks. Because of missing data, we were also forced to rely on regression to generate some of the values.
 
-- receiving foodbank
-- ordering food bank
+Furthermore, in designing the simulation, a wide range of ratios, modifiers, distributions are based on our subjective judgement or rough estimation from brief research. The interactions between these assumptions generate a lot of uncertainty and are difficult to test.
 
-#### Suggestions from Mr. Weible:
+Some interactions between different aspects and methods of the classes may also be unpredicable. While the code is well documented and designed, cascading layers of assumptions may problematize the program.
 
-(Office hour Dec 1)
+The higher level simulation methods, such as the network distribution, are dependent on so many different stochastic parts and markov chain steps that they often behave unpredicably and are difficult to test/debug.
 
-- The receiving foodbank pays for transportation
-- The economic utility function may or may not be valid. Also make intuitive statistics, e.g. the proportion of clients\
-  who get no food at all
-- Compare the setting of sharing food between foodbanks v.s no sharing
-- The simulation doesn't need to be too complicated.
+### Future work
+
+The most pressing future work lies in refining the simulation parameters. While the code design is functional, there are likely demand ratios, population numbers, supply issues, or other problems that vastly lower the supply or inflate the demand for overall function. From our interviews, we know that they often have leftover or expiring food that they distribute to outher food banks. In our current simulation however, food banks very rarely have leftover stocks and the potential exchanges between food banks is extremely limited. This likely reflects a problem in our model design or parameters, however, with our limited data, it is difficult to determine exactly where the issue is. Future work can be focused on verifying and conducting additional research on model design assumptions or data sources.
+
+After model refinement, implementing disaster and system events could improve the adaptability and usefulness of the data. We intended to implement disaster simulation by raising food prices across the board (simulating supply crisis), lowering donations and budgets, as well as vastly boosting the food insecure population (to represent logistical disruption). The food banks would respond to this by rationing and using unlimited free transportation (simulating a government response).
+This could occur on either a national or geographically isolated level.

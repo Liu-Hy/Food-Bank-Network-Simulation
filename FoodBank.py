@@ -442,7 +442,6 @@ if __name__ == '__main__':
     demand_history = []
     quantity_by_food = None
     for day in range(50):
-        # print('current day: ', day)
         _, _, utility, _ = food_bank.run_one_day(budget, food_donations)
         bank_storage.append(sum(food_bank.get_food_quantity().values()))
         utility_history.append(utility)
