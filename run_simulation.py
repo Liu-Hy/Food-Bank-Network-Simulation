@@ -128,7 +128,7 @@ def generate_good_prices(price_summary: pd.DataFrame, num_days: int, ) -> dict[l
     :return: dictionary of price distributions for food items and gasoline
     >>> input_df=pd.read_csv("price_summary.csv")
     >>> output=generate_good_prices(input_df, 365)
-    >>> 2.5<np.mean(output[GAS])<3.4
+    >>> 2.4<np.mean(output[GAS])<3.5
     True
 
     """
@@ -161,7 +161,7 @@ def good_price_distr(price_summary: pd.DataFrame, good: str, num_days: int,
     :return: distribution of good price
     >>> prices=pd.read_csv("price_summary.csv")
     >>> gas=good_price_distr(prices, "gas", 365)
-    >>> 2.5<np.mean(gas)<3.4
+    >>> 2.4<np.mean(gas)<3.5
     True
     >>> np.std(gas)<0.3
     True
@@ -225,8 +225,8 @@ def generate_net_demand(num_foodbank: int, excess_supply_demand: tuple[list[Food
 
     >>> fb=[FoodBank(100000,300000, ), FoodBank(100000,300000, )]
     >>> sup_demand=precalculate_supply_demand(fb)
-    >>> generate_net_demand(2,sup_demand)
-
+    >>> np.shape(generate_net_demand(2,sup_demand))
+    (5, 2, 2)
     """
 
     net_food_demand = np.zeros(
@@ -237,9 +237,6 @@ def generate_net_demand(num_foodbank: int, excess_supply_demand: tuple[list[Food
             demanded_food = excess_supply_demand[1][j].get_quantity()
             for k in range(len(FOOD_GOODS)):
                 food = FOOD_GOODS[k]
-                if available_food[food] != 0 and -demanded_food[food] != 0:
-                    print(available_food[food] != 0)
-                    print(-demanded_food[food] != 0)
                 net_food_demand[k, i, j] = min(available_food[food], -demanded_food[food])
     return net_food_demand
 
@@ -268,10 +265,9 @@ def food_network(food_banks: list, distance_mat: np.ndarray, payment_source: str
     net_demand = generate_net_demand(num_foodbank, excess_supply_demand)
 
     pounds_to_move = np.sum(net_demand, axis=0)
-
     pounds_to_move[pounds_to_move < 1000] = 0  # set threshold for reasonable transport
-    for i in range(len(food_goods)):
-        food_market_value += net_demand[i] * Global.price_for(food_goods[i])
+    for i in range(len(FOOD_GOODS)):
+        food_market_value += net_demand[i] * Global.price_for(FOOD_GOODS[i])
 
     cost_per_truck = distance_mat / TRUCK_MPG * Global._gas_price * 2  # return trip for truck
     cost_per_lb_truck = cost_per_truck / POUNDS_PER_TRUCK
@@ -288,15 +284,15 @@ def food_network(food_banks: list, distance_mat: np.ndarray, payment_source: str
     # take top non-zero value of each row, and exchange the food between the food banks
 
     for i in range(0, len(top_efficiency)):
-        if cost_effective[top_efficiency[i], i] != 0:
+        if cost_effective[i, top_efficiency[i]] != 0:
             j = top_efficiency[i]
             if payment_source == "recipient":
-                costs[j] = total_cost[j, i]
+                costs[j] = total_cost[i, j]
             if payment_source == "sender":
-                costs[i] = total_cost[j, i]
+                costs[i] = total_cost[i, j]
             for k in range(len(FOOD_GOODS)):
-                amount = net_demand[k, j, i]  # access amount of food to transfer for each food type
-                food_exchange(food_banks[j], food_banks[i], excess_supply_demand[0][j], FOOD_GOODS[k], amount)
+                amount = net_demand[k, i, j]  # access amount of food to transfer for each food type
+                food_exchange(food_banks[i], food_banks[j], excess_supply_demand[0][i], FOOD_GOODS[k], amount)
 
     return costs
 
@@ -314,11 +310,11 @@ def food_exchange(sender: FoodBank, recipient: FoodBank, food:Food, type:str,amo
     :param amount: amount of food to transfer
     :return: None
     >>> FB1=FoodBank(10000,20000)
-    >>> FB2 = FoodBank (10000,0)
+    >>> FB2 = FoodBank (10000,1)
     >>> excess=precalculate_supply_demand([FB1,FB2])
     >>> food_exchange(FB1, FB2, excess[0][0], STP, 100)
-    >>> FB1.get_food_quantity()
-    >>> FB2.get_food_quantity()
+    >>> FB2.get_food_quantity()[STP]>1
+    True
     """
 
     sub_food=food.select(type)
@@ -327,7 +323,7 @@ def food_exchange(sender: FoodBank, recipient: FoodBank, food:Food, type:str,amo
             sender.extract_food_from_storage(sub_food)
             recipient.receive_food(sub_food)
         except ValueError:
-            print("Food already distributed")
+            pass
 
 
 
@@ -349,9 +345,9 @@ if __name__ == "__main__":
 
 
     ###CONFIG VARIABLES (SETTABLE)###
-    num_days = 30  # number of days to run simulation
+    num_days = 28  # number of days to run simulation
     inflation_rate = 1.08
-    num_food_banks=20
+    num_food_banks=10
     network_distribution=False
 
     if network_distribution:
