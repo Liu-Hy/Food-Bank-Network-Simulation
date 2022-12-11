@@ -1,3 +1,5 @@
+"""utility functions and classes used by all other class files"""
+
 from typing import Dict
 
 import numpy as np
@@ -44,6 +46,8 @@ def mod_beta_random(low: float, high: float, mean: float, std: float, samples: i
 
 @cython.cclass
 class Food:
+    """Stores a collection of batches of food, and has methods of common dataframe operations about food
+    """
     @cython.ccall
     def __init__(self, stock=None):
         """

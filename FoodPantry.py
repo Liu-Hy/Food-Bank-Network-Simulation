@@ -1,3 +1,5 @@
+"""This file implements the FoodPantry class"""
+
 import math
 import time
 from typing import Dict, Tuple
@@ -8,10 +10,18 @@ import cython
 from Global import *
 from utils import Food, mod_beta_random
 
+
 @cython.cclass
 class FoodPantry:
+    """Simulates the operation of the food pantry and the behavior of clients"""
     @cython.ccall
     def __init__(self, parent, num_households=100, config=Global.config):
+        """
+        Initialize basic attributes of a food pantry, including its clients, food inventory, operation day, etc.
+        :param parent: a reference to the FoodBank object it belongs to
+        :param num_households: the number of households served by the food pantry
+        :param config: a dictionary of boolean options for hypothesis testing
+        """
         self.parent = parent
         self.num_households = num_households
         self.config = config
@@ -76,7 +86,6 @@ class FoodPantry:
     def initialize_weekly_demand(self):
         """Generate each client's proportion of food secured this week in response to price fluctuation, and their
         demand to the food bank.
-        Changes self.clients in place
         :return:
         >>> pantry = FoodPantry(None)
         >>> pantry.initialize_weekly_demand()
@@ -118,7 +127,7 @@ class FoodPantry:
         return est_demand
 
     @cython.ccall
-    def make_order(self, demand: Dict[str, float], stock: Dict[str, float], bank_stock: Dict[str, float]) -> \
+    def set_order_and_limit(self, demand: Dict[str, float], stock: Dict[str, float], bank_stock: Dict[str, float]) -> \
             Tuple[dict, dict]:
         """Make an order to the food bank based on estimated demand and the current inventory of the pantry and the
         foodbank. Request fresh food first, and request packaged food to meet the remaining demand. Set limits on fresh
@@ -132,15 +141,15 @@ class FoodPantry:
         >>> demand = {STP: 100, FV: 100, PT: 100}
         >>> stock = {STP: 30, FFV: 5, PFV: 30, FPT: 5, PPT: 20}
         >>> bank_stock1 = {STP: 500, FFV: 500, PFV: 500, FPT: 500, PPT: 500}
-        >>> pantry.make_order(demand, stock, bank_stock1)[0]  # doctest: +NORMALIZE_WHITESPACE
+        >>> pantry.set_order_and_limit(demand, stock, bank_stock1)[0]  # doctest: +NORMALIZE_WHITESPACE
         {'staples': 70, 'fresh_fruits_and_vegetables': 65, 'packaged_fruits_and_vegetables': 0, 'fresh_protein': 75,
         'packaged_protein': 0}
         >>> bank_stock2 = {STP: 500, FFV: 10, PFV: 500, FPT: 15, PPT: 500}
-        >>> pantry.make_order(demand, stock, bank_stock2)[0]  # doctest: +NORMALIZE_WHITESPACE
+        >>> pantry.set_order_and_limit(demand, stock, bank_stock2)[0]  # doctest: +NORMALIZE_WHITESPACE
         {'staples': 70, 'fresh_fruits_and_vegetables': 10, 'packaged_fruits_and_vegetables': 55, 'fresh_protein': 15,
         'packaged_protein': 60}
         >>> stock2 = {STP: 100, FFV: 0, PFV: 100, FPT: 0, PPT: 100}
-        >>> ordr = pantry.make_order(demand, stock2, bank_stock1)[0]
+        >>> ordr = pantry.set_order_and_limit(demand, stock2, bank_stock1)[0]
         >>> list(ordr.values())
         [0, 0, 0, 0, 0]
         """
@@ -194,10 +203,14 @@ class FoodPantry:
             return param * np.square(data) + (1 - param) * data
 
     @cython.ccall
-    def utility_per_type(self, typ: str) -> pd.Series:
-        """After a pantry activity, estimate the increment in the utility of one type of food per household.
+    def utility_one_type(self, typ: str) -> pd.Series:
+        """After a pantry activity, estimate the increment in utility of some type of food for each household.
         :param typ: The type of food for which to calculate utility increment
         :return:
+        >>> pantry = FoodPantry(None)
+        >>> pantry.initialize_weekly_demand()
+        >>> all(pantry.utility_one_type(typ).round(2).sum()==0 for typ in Global.get_food_demand_types())
+        True
         """
         assert typ in [STP, FV, PT]
         family_size = self.clients[("num_people", "")]
@@ -218,15 +231,30 @@ class FoodPantry:
     @cython.ccall
     def get_utility(self) -> float:
         """Estimate the increment in total food utility after a pantry activity
-        :return:
+        :return: a float number of the total utility
+        >>> pantry = FoodPantry(None)
+        >>> pantry.initialize_weekly_demand()
+        >>> round(pantry.get_utility(), 3) == 0
+        True
+        >>> pantry.clients[(STP, "purchased")] = pantry.clients[(STP, "demand")]
+        >>> 0.2 < (pantry.get_utility() / pantry.num_households) < 0.6
+        True
+        >>> pantry.initialize_weekly_demand()
+        >>> pantry.clients[(FV, "purchased_fresh")] = pantry.clients[(FV, "demand")]
+        >>> u1 = pantry.get_utility()
+        >>> pantry.initialize_weekly_demand()
+        >>> pantry.clients[(FV, "purchased_packaged")] = pantry.clients[(FV, "demand")]
+        >>> u2 = pantry.get_utility()
+        >>> (0.65 * u1) < u2 < (0.75 * u1)  # utility of packaged food should be about 0.7 of fresh food
+        True
         """
         tot_util = pd.Series(np.zeros(self.num_households))
         for typ in [STP, FV, PT]:
-            tot_util += self.utility_per_type(typ)
+            tot_util += self.utility_one_type(typ)
         return tot_util.sum() / 3  # / (self.num_people * 3)
 
     @cython.ccall
-    def allocate_food(self, food, demand) -> Tuple[pd.Series, pd.DataFrame, int]:
+    def allocate_food(self, food: pd.DataFrame, demand: pd.Series) -> Tuple[pd.Series, pd.DataFrame, int]:
         """Clients line up to purchase one type of food. Record their purchase and update the pantry inventory.
         :param food: the dataframe of some type of food
         :param demand: a pd.Series object storing the demand of clients in the queue
@@ -296,7 +324,24 @@ class FoodPantry:
         """Hold a pantry activity. Although in reality one client shops multiple types of food at once, to avoid
         unnecessary computation, we transform it to the equivalent process of allocating food multiple times, once for
         each type of food.
-        Changes self.clients and self.food in place
+        :param limit: a dictionary that maps each food type to a quantity
+        :return: a tuple where the first element is the number of clients who get all their demand satisfied (either
+        fresh or packaged), and the second is the number of clients who get at least some food.
+        >>> pantry = FoodPantry(None)
+        >>> pantry.food = Food(1000)
+        >>> limits = {FV: 0, PT: 0}
+        >>> pantry.initialize_weekly_demand()
+        >>> tup1 = pantry.hold_pantry(limits)
+        >>> tup1[1] == 100
+        True
+        >>> pantry.food = Food(1000)
+        >>> pantry.initialize_weekly_demand()
+        >>> limits2 = {FV: 10000, PT: 10000}
+        >>> tup2 = pantry.hold_pantry(limits2)
+        >>> tup1[0] < tup2[0]
+        True
+        >>> tup1[1] > tup2[1]
+        True
         """
         types = {STP: [STP], FV: [FFV, PFV], PT: [FPT, PPT]}
         remains = []
@@ -351,29 +396,35 @@ class FoodPantry:
                     raise ValueError
         self.food.df = pd.concat(remains).reset_index(drop=True)
         self.previous_record.append(est_demand)
-        # number of clients who get all their demand satisfied (either fresh or packaged)
         all_served = min(served_per_type[0], served_per_type[2], served_per_type[4])
-        # number of clients who get at least some food
         partly_served = min(max(served_per_type) + 1, self.num_households)
         return all_served, partly_served
 
     @cython.ccall
-    def run_one_day(self) -> Tuple[Dict[str, float], Dict[str, float], float, Tuple[int, int], Dict[str, float]]:
+    def run_one_day(self, debug=False) -> Tuple[Dict[str, float], Dict[str, float], float, Tuple[int, int], Dict[str, float]]:
         """ Run the simulation for one day.
-        Changes self.clients, self.food and self.parent.food in place.
-        :return:
+        :param debug: a boolean of whether the method is called in debug mode
+        :return: a tuple consisting of a dictionary of food waste per type, a dictionary of an order of food, a float
+        of total utility, a tuple of the number of clients served, and a dictionary of the best knowledge about the
+        client demand from the pantry owner.
         >>> pantry = FoodPantry(None)
-        >>> waste, order, utility, num_served = pantry.run_one_day()
+        >>> waste, order, utility, num_served, _ = pantry.run_one_day(debug=True)
+        >>> sum(waste.values()) == 0
+        True
+        >>> num_served[1] > 80
+        True
         """
-        if (Global.get_day() % 7) != self.operation_day:
+        if (not debug) and (Global.get_day() % 7) != self.operation_day:
             return
         self.initialize_weekly_demand()
         waste = self.food.quality_control(num_days=7)
         est_demand = self.estimate_demand()
-        order, limits = self.make_order(est_demand, self.food.get_quantity(), self.parent.get_food_quantity())
-        # order, limits = self.make_order(est_demand, self.food.get_quantity(), Food(1500).get_quantity())
-        suppl = self.parent.get_food_order(order)
-        # suppl = Food(1500).subtract(order)
+        if debug:
+            order, limits = self.set_order_and_limit(est_demand, self.food.get_quantity(), Food(1500).get_quantity())
+            suppl = Food(1500).subtract(order)
+        else:
+            order, limits = self.set_order_and_limit(est_demand, self.food.get_quantity(), self.parent.get_food_quantity())
+            suppl = self.parent.get_food_order(order)
         self.food.add(suppl)
         self.food.sort_by_freshness()
         self.clients = self.clients.sample(frac=1).reset_index(drop=True)
@@ -393,7 +444,7 @@ if __name__ == '__main__':
     pantry = FoodPantry(None, num_households=households)
     start = time.time()
     for i in range(num_days):
-        waste, order, utility, num_served, _ = pantry.run_one_day()
+        waste, order, utility, num_served, _ = pantry.run_one_day(debug=True)
         utilities.append(utility)
         wastes.append(waste)
         served_ls.append(num_served)
