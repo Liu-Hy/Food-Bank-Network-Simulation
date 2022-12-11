@@ -102,6 +102,25 @@ Before each day is simulated, the simulation organizes the exchange of food betw
 
 ### Unit Food Bank Simulation
 
+Unit food bank simulation can be tested by running `FoodBank.py`.
+The following variables can be modified for testing and generating graphs. Current graphs are utility summation, bank storage per type and total bank storage.
+
+```python
+food_insecure_pop = 323340
+initial_storage = 2267631
+budget = 38614*2
+food_donations = 145376*1.5
+
+food_bank = FoodBank(food_insecure_pop, initial_storage)
+Global._base_prices = {
+    STP: 2,
+    FFV: 3,
+    PFV: 2,
+    FPT: 3,
+    PPT: 2,
+}
+```
+
 To test that our simulation is working at the Food Bank level, measured daily average utility.
 In the following plot, it we observe that average utility stabilizes at around .25, which is the value we expect:
 
@@ -116,6 +135,7 @@ Furthermore, when a food bank is provided with excessive amounts of donations, w
 ### Simulation level hypothesis: food sharing
 
 Convergence of weekly utility and food waste at 10 food banks over 28 days. (Utility is undefined on the first week)
+
 ![Stable Utility total](./plots/sim_level_utility_WITHOUT_EXCHANGE.png)
 
 ![food waste total](./plots/sim_level_waste_WITHOUT_EXCHANGE.png)
