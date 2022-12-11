@@ -68,7 +68,7 @@ class FoodBank:
         """
         # what future stock will look like considering last week's demand
         future_storage = self.next_week_storage_estimate().df
-        return Food(future_storage[future_storage['remaining_days'] <= 7])
+        return Food(future_storage[(future_storage['remaining_days'] <= 7) & (future_storage['quantity'] > 0)])
 
     @cython.ccall
     def extract_food_from_storage(self, food: Food):
