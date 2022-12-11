@@ -18,7 +18,7 @@ class FoodBank:
         self.pantries: List[FoodPantry] = [FoodPantry(self, num_households=households_per_pantry) for _ in
                                            range(num_pantries)]
 
-        food_types = Global.get_food_types()
+        food_types = food_goods 
         self.pantry_demand = dict(zip(food_types, [0] * len(food_types)))
 
         self.storage = Food(initial_storage)

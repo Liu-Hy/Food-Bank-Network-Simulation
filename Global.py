@@ -62,11 +62,11 @@ class Global:
     @classmethod
     def set_price(cls, good_type: str, price: float):
         """
-    sets price for food, used by simulation
-    :param good_type: string name of food type
-    :param price: float price
-    :return: None
-    """
+        sets price for food, used by simulation
+        :param good_type: string name of food type
+        :param price: float price
+        :return: None
+        """
         cls._base_prices[good_type] = price
 
     @classmethod

@@ -113,7 +113,7 @@ def generate_good_prices(price_summary: pd.DataFrame, num_days: int, ) -> dict[l
     """
     price_dict = dict()
 
-    price_dict["gas"] = good_price_distr(price_summary, "gas", num_days)
+    price_dict[GAS] = good_price_distr(price_summary, "gas", num_days)
     price_dict[FFV] = good_price_distr(price_summary, "ffv", num_days)
     price_dict[FPT] = good_price_distr(price_summary, "meat", num_days)
     price_dict[STP] = good_price_distr(price_summary, "staples", num_days)
@@ -167,9 +167,10 @@ def tick_day(food_banks: list):
     """
 
 
-def redistribute_food(food_banks: list, distance_mat: np.ndarray, payment_source:str="recipient") -> None:
+def food_network(food_banks: list, distance_mat: np.ndarray, payment_source:str="recipient",) -> None:
     """
     Implements national food sharing network
+    food banks indexed by (sending,receiving)
 
     :param payment_source: setting to control distribution strategy,
     recipient: receiving food bank pays
@@ -179,16 +180,42 @@ def redistribute_food(food_banks: list, distance_mat: np.ndarray, payment_source
     :param food_banks: list of food banks to redistribute food between
     :return: None
     """
+    num_foodbank=len(food_banks)
+    pounds_to_move = np.empty([num_foodbank, num_foodbank])
+    food_market_value=np.empty([num_foodbank, num_foodbank])
+
+    #precalculate food bank demands and supplies
+    excess_supply=[]
+    excess_demand=[]
+    for f in food_banks:
+        #precalculate supply and remove going bad food
+        supply=f.food_going_bad()
+        supply.quality_control()
+        excess_supply.append(supply)
+
+        #precalculate demands for each food bank
+        excess_demand.append(f.future_unmet_demand())
+
+    net_demand=np.empty([num_foodbank,num_foodbank])
+    for i in range(num_foodbank):
+        sending:FoodBank = food_banks[i]
+        available_food:Food=excess_supply[i]
+        for j in range(num_foodbank):
+            receiving:FoodBank=food_banks[j]
+            demanded_food:Food=excess_demand[j]
+            for food in food_goods:
 
 
-    for i in range(len(food_banks)):
-        for j in range(len(food_banks)):
-           for food in food_goods:
-                Global.price_for(food)
+        pounds_to_move+=net_demand
+        food_market_value+=net_demand*Global.price_for(food)
 
+def food_subset(food_supply, food_to_remove:dict):
+    """
 
-
-
+    :param food_supply:
+    :param food_to_remove:
+    :return: new food object
+    """
 
 if __name__ == "__main__":
     food_banks_df = pd.read_csv("input.csv").head(1)
@@ -214,6 +241,7 @@ if __name__ == "__main__":
         plt.show()
 
     for i in range(0, num_days):
+
         for g in good_prices:
             Global.set_price(g,good_prices[g][i])
 
@@ -223,6 +251,7 @@ if __name__ == "__main__":
             print(daily_donations[j,i])
             curr.run_one_day(budget=daily_budget[j,i], food_donations=daily_donations[j,i])
             #print(curr.total_waste)
+        Global.add_day()
 
 
 
