@@ -111,6 +111,10 @@ Furthermore, when a food bank is provided with excessive amounts of donations, w
 
 ![Excess Donations Bank Utility](./plots/foodbank_utility_history_high_donations.png)
 
+For hypothesis 1: If the pantry owner has the accurate information about client demand, the utility increases by 8%, and the proportion of clients who get all their demand satisfied increases from 61% to 70%. In a more realistic setting, if only one pantry has transparent information, it will produce 6% more utility and serve 4% more of its clients\
+For hypothesis 2: Setting a fixed limit per client (as a interviewed pantry does) slightly worsens the outcome; setting the limit proportional to the number of people in family improves utility by 1% (small but statistically significant). This raises the question of what is the best practice for fairness for pantry owners.
+
+
 ### Simulation level hypothesis: food sharing
 
 Convergence of weekly utility and food waste at 10 food banks over 28 days. (Utility is undefined on the first week)
