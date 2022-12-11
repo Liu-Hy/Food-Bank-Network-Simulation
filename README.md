@@ -81,20 +81,25 @@ Furthermore, when a food bank is provided with excessive amounts of donations, w
 
 Convergence of weekly utility and food waste at 10 food banks over 28 days. (Utility is undefined on the first week)
 ![Stable Utility total](./plots/sim_level_utility_WITHOUT_EXCHANGE.png)
-![food waste total](./plots/sim_level_waste_WITHOUT_EXCHANGE.png.png)
+
+![food waste total](./plots/sim_level_waste_WITHOUT_EXCHANGE.png)
 
 The spike in initial food waste comes from overassignment of fresh protein relative to consumer demand in the initial storages. 
 
 With the addition of good sharing between networks (transportation paid for by receiving food bank), we do not see a significant change in total utility. This may be because the quantities of excess food are so low at equilibrium that all food banks struggle to provide food to their customers 
+
 ![Stable Utility total network](./plots/sim_level_utility_WITH_EXCHANGE.png)
+
 The average weekly utility is 226,855 with network sharing compared to 226,647, only a 0.09% improvement. 
 
 ![food waste total network](./plots/sim_level_waste_WITH_EXCHANGE.png)
+
 However, we see substantial reductions in food waste across all categories. Staples (162 lbs wasted in exchange compared to 187 lbs (a roughly 15.4% reduction). Fresh fruits, 372 lbs shared compared to 456 not shared, a 22.6% reduction. Protein, 12,033 lbs shared compared to 12,256, a 1.9% reduction. 
 
 Because the supply is so far outstripped by the demand for food in our observed data, there is very limited food waste. 
 
 ![Supply outstrips](food_bank_goods.png)
+
 A one food bank simulation with actual data inputs shows that there is no excess supply once the initial stockpile is consmed (e.g. the observed daily intake is not enough to fill demand)
 
 
