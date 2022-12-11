@@ -45,7 +45,7 @@ class Food:
     def __init__(self, stock=None):
         """
         Initialize a Food object which is either empty, or based on a dataframe or total pounds of food.
-        :param stock:
+        :param stock: the food data to initialize with
         >>> Food().df
         Empty DataFrame
         Columns: [type, remaining_days, quantity]
@@ -98,7 +98,7 @@ class Food:
         """Generate donated food to a food bank in a day. The quantity of different types and the total are random, but
         their mean values are derived from anual statistics.
         :param mean_total: the mean of the total pounds of foods donated to a food bank per day.
-        :return:
+        :return: a Food object of the donated food
         >>> food = Food.generate_donation(5000).df
         >>> len(food) == sum(info["max_days"] for info in TYPES.values())
         True
@@ -201,19 +201,19 @@ class Food:
         [194 rows x 3 columns]
         >>> food.select("strange").df
         Traceback (most recent call last):
-        AssertionError
+        AssertionError: invalid food type
         >>> food.select([FFV, "strange"]).df
         Traceback (most recent call last):
-        AssertionError
+        AssertionError: invalid combination of food types
         """
         if isinstance(typ, str):
-            assert typ in TYPES
+            assert typ in TYPES, "invalid food type"
             return Food(self.df[self.df["type"] == typ].reset_index(drop=True))
         elif isinstance(typ, list):
-            assert set(typ).issubset(set(TYPES.keys()))
+            assert set(typ).issubset(set(TYPES.keys())), "invalid combination of food types"
             return Food(self.df[self.df["type"].isin(typ)].reset_index(drop=True))
         else:
-            raise TypeError
+            raise TypeError("The 'typ' parameter should be of either str or list type")
 
     def quality_control(self, num_days=1, inplace=True) -> Dict[str, float]:
         """Subtract some days from the remaining shelf life of the food, remove the expired food from stock, and record
@@ -260,13 +260,31 @@ class Food:
     def add(self, other) -> None:
         """ Add a new batch of food to stock. Merge food items with same type and remaining days.
         Fully tested on jupyter notebook. Still thinking of how to present tests concisely in doctrings
-        :param other:
+        :param other: a Food object as supplement
         :return:
-        >>> a = Food(2000)
-        >>> b = Food(3000)
+        >>> a = Food(1000).select(STP)
+        >>> b = Food(1000).select(FPT)
         >>> a.add(b)
-        >>> a.df["quantity"].sum()
-        5000.0
+        >>> added = a.sort_by_freshness(inplace=False)
+        >>> added.df.round(3)  # doctest: +ELLIPSIS
+                      type  remaining_days  quantity
+        0    fresh_protein              10    10.000
+        1    fresh_protein               9    10.000
+        ...
+        188        staples               2     1.667
+        189        staples               1     1.667
+        <BLANKLINE>
+        [190 rows x 3 columns]
+        >>> subset = Food(1000).select([STP, FPT]).sort_by_freshness(inplace=False)
+        >>> added.df.equals(subset.df)
+        True
+        >>> c = Food(1000)
+        >>> d = Food(1000)
+        >>> c.add(d)
+        >>> added2 = c.sort_by_freshness(inplace=False)
+        >>> double = Food(2000).sort_by_freshness(inplace=False)
+        >>> added2.df.equals(double.df)
+        True
         """
         if isinstance(other, Food):
             other = other.df
@@ -283,10 +301,13 @@ class Food:
 
     def subtract(self, order: Dict[str, float], predict=False):
         """
-        Subtract some quantity of food from stock, and return the Food object with that quantity.
-        :param order: a dictionary storing the ordered food in each category
-        :param predict: Set to True to preview food shortage in the next few days.
-        :return:
+        Subtract some quantity of food from stock, and return the Food object with that quantity with specific remaining
+        shelf lives.
+        :param order: a dictionary storing the quantity of ordered food in each category
+        :param predict: Set to True to preview food availability in the next few days, where negative quantities will be
+        used to represent shortage; otherwise, an error will be raised for subtracting more than available.
+        :return: if "predict" is set to False, returns a Food object of the subtracted food; if set to True, returns a
+        tuple of two Food objects, the first being the subtracted food and the second being the remaining food.
         >>> food = Food(5000)
         >>> q = food.get_quantity()
         >>> order = {k: v-7 for k, v in q.items()}
